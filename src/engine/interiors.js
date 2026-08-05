@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { box, cyl, blob, merge, C } from './shops/common.js';
+import { box, cyl, blob, merge, C } from './prim.js';
 
 // Small enterable interior rooms — one per enterable shop type. Each is an
 // inverted BackSide "box" shell (so the follow-camera never gets occluded from

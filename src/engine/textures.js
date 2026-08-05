@@ -19,7 +19,7 @@ export const TEX = {
   anisotropy: 8,
 };
 
-function makeCanvas(w, h) {
+export function makeCanvas(w, h) {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
@@ -29,7 +29,7 @@ function makeCanvas(w, h) {
 // Finalize any canvas into a THREE texture with the shared colour space +
 // anisotropy, optionally tiled. Everything goes through here so no surface ends
 // up with an odd colour space or filtering that makes it look out of place.
-function finish(canvas, { repeatX = 1, repeatY = 1, tiled = true } = {}) {
+export function finish(canvas, { repeatX = 1, repeatY = 1, tiled = true } = {}) {
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = TEX.colorSpace;
   tex.anisotropy = TEX.anisotropy;

@@ -10,24 +10,34 @@ import { isTypingInUI } from './inputGuard.js';
 //
 // Returns { update, setEnabled, state }.
 
-export function createThirdPerson(camera, dom, character, colliders, bounds, groundHeightAt = () => 0, dynamicColliders = []) {
-  const PLAYER_H = 3.5;   // used for vertical collider overlap (elevated railings etc.)
-  const MAX_STEP_UP = 3;  // tallest ledge that counts as walkable (a ramp); higher = a wall
+export function createThirdPerson(camera, dom, character, colliders, bounds, groundHeightAt = () => 0, dynamicColliders = [], opts = {}) {
+  // Tuning is injectable so the same controller drives a 4-unit humanoid (the
+  // original engine) and a 1-unit cat (Sushi Paws) without a second copy.
+  const TUNE = {
+    playerH: 3.5, radius: 1.4, stepUp: 3,
+    gravity: 62, jumpV: 21, fallLedge: 1.5,
+    walk: 9, run: 18,
+    dist: 12, distMin: 5, distMax: 24,
+    headScale: 3.0, headFactor: 0.7,
+    ...opts,
+  };
+  const PLAYER_H = TUNE.playerH;
+  const MAX_STEP_UP = TUNE.stepUp;
   const state = { yaw: Math.PI, pitch: 0.35 };
   let enabled = false;
   let lookMode = false; // look-around only (e.g. while riding the train)
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
-  let dist = 12;
+  let dist = TUNE.dist;
 
   // --- Vertical motion (jump / fall) + crouch --------------------------------
   // The world is built at roughly 2.3× life size (the avatar is 4 units tall),
   // so gravity and the launch speed are scaled to match — otherwise a "realistic"
   // 9.8 m/s² makes the jump feel like it's happening on the moon.
-  const GRAVITY = 62;      // units/s²
-  const JUMP_V = 21;       // launch speed → ~3.5 units of air, ~0.7 s hang time
-  const FALL_LEDGE = 1.5;  // drop under the feet that becomes a real fall (not a stair lip)
+  const GRAVITY = TUNE.gravity; // units/s²
+  const JUMP_V = TUNE.jumpV; // launch speed → ~3.5 units of air, ~0.7 s hang time
+  const FALL_LEDGE = TUNE.fallLedge; // drop under the feet that becomes a real fall (not a stair lip)
   let vy = 0;
   let grounded = true;
   let jumpQueued = false;  // set on the Space keydown edge, consumed next update
@@ -36,6 +46,7 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
   // the normal collision pass so you can't be shoved inside a building.
   const knock = { x: 0, z: 0 };
 
+  let lastSpeed = 0;
   const keys = Object.create(null);
   const clearKeys = () => { for (const k in keys) keys[k] = false; };
 
@@ -99,7 +110,7 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
     'wheel',
     (e) => {
       if (!enabled && !lookMode) return;
-      dist = Math.max(5, Math.min(24, dist + Math.sign(e.deltaY)));
+      dist = Math.max(TUNE.distMin, Math.min(TUNE.distMax, dist + Math.sign(e.deltaY)));
     },
     { passive: true }
   );
@@ -122,7 +133,7 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
       // Skip colliders the player isn't level with (so elevated platform
       // railings only block up on the deck, not while walking underneath).
       if (headY <= b.min.y || feetY >= b.max.y) continue;
-      const r = 1.4;
+      const r = TUNE.radius;
       // Strictly INSIDE the box: the closest point on the box is the point
       // itself, so the usual push-out is a no-op and the character sinks
       // straight through. That never mattered for buildings (you can't get
@@ -205,7 +216,7 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
         move.normalize();
         // No sprinting out of a crouch; crouch-walking is a ~40% speed waddle.
         const run = (keys['ShiftLeft'] || keys['ShiftRight']) && crouch < 0.35;
-        const spd = (run ? 18 : 9) * (1 - 0.58 * crouch);
+        const spd = (run ? TUNE.run : TUNE.walk) * (1 - 0.58 * crouch);
         pos.x += move.x * spd * dt;
         pos.z += move.z * spd * dt;
         speed = spd;
@@ -258,11 +269,17 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
 
     // Smoothly turn the character toward the movement direction.
     character.group.rotation.y = lerpAngle(character.group.rotation.y, facing, 0.18);
+    lastSpeed = speed;
     character.update(dt, speed, { crouch, airborne: !grounded, vy });
 
     // Orbit camera behind the character (dropping with them into the crouch).
-    const headH = 3.0 * character.group.scale.y * (1 - 0.26 * crouch);
-    target.set(pos.x, pos.y + headH * 0.7, pos.z);
+    // Cat and humanoid rigs report their own eye height; fall back to the old
+    // fixed multiple so the original engine characters still frame correctly.
+    const eyeH = typeof character.eyeHeight === 'function'
+      ? character.eyeHeight()
+      : TUNE.headScale * character.group.scale.y;
+    const headH = eyeH * (1 - 0.26 * crouch);
+    target.set(pos.x, pos.y + headH * TUNE.headFactor, pos.z);
     dir.set(
       Math.sin(state.yaw) * Math.cos(state.pitch),
       Math.sin(state.pitch),
@@ -312,5 +329,12 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
   /** Shove the character (a car impact). Units per second, decays over ~1s. */
   function applyKnockback(kx, kz) { knock.x = kx; knock.z = kz; }
 
-  return { update, setEnabled, state, setDist, setFacing, updateLook, setLookMode, applyKnockback };
+  return {
+    update, setEnabled, state, setDist, setFacing, updateLook, setLookMode, applyKnockback,
+    get dist() { return dist; },
+    get grounded() { return grounded; },
+    get enabled() { return enabled; },
+    get speed() { return lastSpeed; },
+    tune: TUNE,
+  };
 }

@@ -1,30 +1,43 @@
-# Project: Three.js Open-World City
+# Project: Sushi Paws
 
-This is a first-person, explorable 3D city built with **Three.js** and **Vite**.
-Textures are generated procedurally on a canvas (no external asset files).
+A cozy semi-open-world Three.js game: a cat becomes a sushi master in a
+Japanese-inspired city. Built on the `ENGINE CITY` base.
 
 ## Run
-- `npm install` then `npm run dev` (opens the browser; click to lock the mouse).
-- Build: `npm run build`, preview: `npm run preview`.
+`npm install` then `npm run dev`. Build with `npm run build`.
+Test with `npm run build && node tools/smoke.mjs` — it must print ALL CHECKS PASSED.
 
-## Layout
-- `src/main.js` — renderer, scene, gradient sky + sun, lights, fog, outline post-processing, animation loop, wiring.
-- `src/city.js` — procedural city generator: roads, buildings, parks, instanced wind-animated grass, chunky trees, collider boxes.
-- `src/character.js` — blocky low-poly player character with a procedural walk-cycle animation.
-- `src/controls.js` — third-person WASD controller: camera-relative movement, follow camera, turn-to-face, collision.
-- `src/textures.js` — canvas-generated toon gradient map + facade / ground / road textures.
-- `index.html` — page shell, start overlay, HUD, styles.
-
-## Controls
-WASD walk (third person) · Shift sprint. The camera follows behind; the character turns to face movement.
+## Architecture rules
+- Systems are factories `createX(game)` returning `{ update(dt), … }`. They talk
+  through `src/game/bus.js` (`EV.*` names only — never string literals) and never
+  hold references to each other. `main.js` owns construction order and the loop.
+- `state.data` must stay JSON-safe: no THREE objects, no DOM, no functions. That
+  is what makes saving cheap. Mutations go through `state` methods so events fire.
+- Content lives in `src/data/`. Gameplay code must not contain content lists.
+- Geometry: build with the `src/engine/prim.js` helpers, `merge()` into one
+  geometry per prefab, render with `InstancedMesh`. Prefabs face `+Z`.
+- Emissive materials go into `world.glowMats` (warm windows) or `world.neonMats`
+  (signs) so the day/night ramp can drive them.
+- UI is built from `src/ui/kit.js` primitives and its CSS custom properties.
+  Never hardcode a second palette.
+- Panels register with `game.panels` and follow the contract in
+  `src/game/CONTRACT.md`. Mini-games must restore `game.setMode('explore')` and
+  unlock the player on *every* exit path, including Esc and thrown errors.
 
 ## Conventions
 - Three.js r0.169, ES modules, `import * as THREE from 'three'`.
-- Add-ons come from `three/addons/...` (e.g. `three/addons/loaders/GLTFLoader.js`).
-- Keep the project self-contained: prefer procedural or bundled assets over external URLs.
-- The city uses a seeded RNG (`seed` in `buildCity`) so layouts are reproducible.
+- Add-ons from `three/addons/...`.
+- No asset files — textures are canvas-drawn, audio is synthesised.
+- Scale: 1 unit ≈ 1 metre, one storey = 3.6, streets 9–11 wide, the cat is
+  0.78 at the shoulder.
+- Coordinates: +X east, +Z south, Y up. Yaw 0 faces +Z.
+- Comment only where the intent is not obvious from the code.
 
-## Skills
-Three.js skills are installed in `.claude/skills/`. Use them when relevant:
-fundamentals, geometry, materials, lighting, textures, animation, loaders,
-shaders, postprocessing, interaction.
+## Do not
+- Import anything from `src/_attic/` — it is ENGINE CITY reference code, kept
+  deliberately unwired.
+- Edit `~/Documents/ROXX/2. MOCKUP/ENGINE CITY`. It is the upstream base.
+
+## Docs
+`docs/AUDIT.md` (what the engine had), `docs/ROADMAP.md` (decisions + phase
+status), `docs/DEVLOG.md` (what changed and what broke).

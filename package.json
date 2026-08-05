@@ -1,7 +1,7 @@
 {
-  "name": "threejs-city",
+  "name": "sushi-paws",
   "version": "1.0.0",
-  "description": "A realistic-ish open-world 3D city prototype built with Three.js, explored in first person with WASD + mouse-look.",
+  "description": "Sushi Paws — a cozy semi-open-world game about a cat who dreams of becoming the greatest sushi master in the city.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,8 @@
     "three": "^0.169.0"
   },
   "devDependencies": {
+    "esbuild": "^0.28.1",
+    "playwright": "^1.62.1",
     "vite": "^5.4.0"
   }
 }
