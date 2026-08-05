@@ -13,7 +13,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { GAME, CAT_MODEL_URL, PLAYER_CAT, RENDER, QUALITY, DEBUG } from './config.js';
+import { GAME, CAT_MODEL_URL, PLAYER_CAT, RENDER, QUALITY, DEBUG, CITY_PALETTE } from './config.js';
 import { createBus, EV } from './game/bus.js';
 import { createState } from './game/state.js';
 import { createSaveSystem } from './game/save.js';
@@ -31,9 +31,14 @@ import { createQuests } from './game/questEngine.js';
 import { createNpcs } from './game/npcRuntime.js';
 import { createGuide } from './game/guide.js';
 import { createTutorial } from './game/tutorial.js';
+import { createShadowTutorial } from './game/shadowTutorial.js';
 import { createGuideUI } from './ui/guideUI.js';
 import { createDialogueUI } from './ui/dialogueUI.js';
 import { createUI, createPanelManager } from './ui/index.js';
+import { createSocialUI } from './ui/socialUI.js';
+import { createWalletStatus, readSession, writeSession } from './ui/walletStatus.js';
+import { createSimpleMinimap } from './ui/simpleMinimap.js';
+import { createLanding } from './landing/landing.js';
 import { createAudio } from './audio/audio.js';
 import { catFromOptions } from './cat/catLoader.js';
 import { makeToonGradient } from './engine/textures.js';
@@ -43,6 +48,7 @@ import { HOME, DISTRICTS } from './data/districts.js';
 import { SUPPLIERS, isOpenAt } from './data/suppliers.js';
 import { UPGRADES } from './data/upgrades.js';
 import { checkRecipeUnlocks } from './data/recipes.js';
+import { NPCS } from './data/npcs.js';
 
 // ===========================================================================
 // Renderer, scene, camera
@@ -64,12 +70,7 @@ camera.position.set(HOME.spawn.x, 4, HOME.spawn.z + 8);
 // --- Sky ---------------------------------------------------------------
 // A single inverted sphere with a three-stop vertical gradient. Cheap, and the
 // three colours are all we need to sell dawn / noon / dusk / night.
-const SKY = {
-  day:   { top: 0x6fb2e0, mid: 0xbfe0f0, bot: 0xf7e9cf },
-  dusk:  { top: 0x4a5f96, mid: 0xe08a5a, bot: 0xf6c98a },
-  dawn:  { top: 0x8fb6de, mid: 0xf2cdae, bot: 0xfbe7c8 },
-  night: { top: 0x131a33, mid: 0x243256, bot: 0x3c4468 },
-};
+const SKY = CITY_PALETTE;
 const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false,
   uniforms: {
@@ -91,7 +92,7 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(600, 24, 16), skyMat);
 sky.frustumCulled = false;
 scene.add(sky);
 
-scene.fog = new THREE.Fog(0xbfe0f0, RENDER.fog.near, RENDER.fog.far);
+scene.fog = new THREE.Fog(CITY_PALETTE.fogDay, RENDER.fog.near, RENDER.fog.far);
 
 // --- Lights -------------------------------------------------------------
 const sunLight = new THREE.DirectionalLight(0xfff2d8, 2.1);
@@ -109,9 +110,9 @@ sunLight.shadow.normalBias = 0.03;
 scene.add(sunLight);
 scene.add(sunLight.target);
 
-const hemi = new THREE.HemisphereLight(0xcfe6f5, 0xd9c6a2, 0.9);
+const hemi = new THREE.HemisphereLight(CITY_PALETTE.hemiDay, 0xc9a8b8, 0.95);
 scene.add(hemi);
-const ambient = new THREE.AmbientLight(0xffffff, 0.42);
+const ambient = new THREE.AmbientLight(CITY_PALETTE.ambient, 0.48);
 scene.add(ambient);
 
 const gradientMap = makeToonGradient(4);
@@ -189,15 +190,16 @@ function applyDayNight(night, hourF) {
   sunLight.target.position.set(p.x, 0, p.z || 0);
   sunLight.target.updateMatrixWorld();
 
-  sunLight.intensity = 2.1 * (1 - night * 0.86);
-  sunLight.color.setHex(dusk > 0.3 ? 0xffcf9a : dawn > 0.3 ? 0xffe6c4 : 0xfff2d8);
-  hemi.intensity = 0.9 * (1 - night * 0.55) + night * 0.28;
-  hemi.color.setHex(night > 0.5 ? 0x2e3a5c : 0xcfe6f5);
-  ambient.intensity = 0.42 * (1 - night * 0.35) + night * 0.22;
+  sunLight.intensity = 2.0 * (1 - night * 0.82);
+  sunLight.color.setHex(dusk > 0.3 ? CITY_PALETTE.sunDusk : dawn > 0.3 ? 0xffd0e0 : CITY_PALETTE.sunDay);
+  hemi.intensity = 0.95 * (1 - night * 0.5) + night * 0.35;
+  hemi.color.setHex(night > 0.5 ? CITY_PALETTE.hemiNight : CITY_PALETTE.hemiDay);
+  ambient.intensity = 0.48 * (1 - night * 0.3) + night * 0.28;
 
-  for (const m of world.glowMats) if (m) m.emissiveIntensity = 0.05 + night * 1.15;
-  for (const m of world.neonMats) if (m) m.emissiveIntensity = 0.3 + night * 1.0;
-  if (bloomPass) bloomPass.strength = 0.10 + night * 0.22;
+  // Purple night boost — neon + windows punch harder so the city reads like pic 2.
+  for (const m of world.glowMats) if (m) m.emissiveIntensity = 0.08 + night * 1.35;
+  for (const m of world.neonMats) if (m) m.emissiveIntensity = 0.45 + night * 1.35;
+  if (bloomPass) bloomPass.strength = 0.12 + night * 0.32;
 }
 
 // ===========================================================================
@@ -246,17 +248,18 @@ const OutlineShader = {
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null },
-    warmth: { value: 0.06 },
-    saturation: { value: 1.08 },
-    vignette: { value: 0.22 },
+    warmth: { value: 0.02 },
+    purple: { value: 0.08 },
+    saturation: { value: 1.12 },
+    vignette: { value: 0.24 },
   },
   vertexShader: OutlineShader.vertexShader,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float warmth, saturation, vignette;
+    uniform sampler2D tDiffuse; uniform float warmth, purple, saturation, vignette;
     varying vec2 vUv;
     void main(){
       vec3 c = texture2D(tDiffuse, vUv).rgb;
-      c += vec3(warmth, warmth * 0.4, -warmth * 0.35);
+      c += vec3(warmth * 0.5 + purple * 0.15, warmth * 0.15, purple * 0.55 - warmth * 0.1);
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       c = mix(vec3(l), c, saturation);
       vec2 d = vUv - 0.5;
@@ -313,7 +316,10 @@ game.setQuality = (n) => { state.settings.quality = n; applyQuality(n); save.sav
 let player = null;
 let clock = null, orders = null, restaurant = null, cooking = null, fishing = null,
     delivery = null, foraging = null, quests = null, npcs = null, ui = null, dialogue = null,
-    guide = null, tutorial = null, guideUI = null;
+    guide = null, tutorial = null, guideUI = null,
+    social = null, walletStatus = null, minimap = null, shadowTut = null, landing = null;
+let gameStarted = false;
+let muted = false;
 
 // Objects that must not appear in the outline's depth prepass (sprites, points
 // and anything else whose billboard quad would carve a hole in the depth
@@ -356,6 +362,25 @@ async function boot() {
 
   ui = createUI(game);                game.ui2 = ui;
 
+  // ENGINE CITY-style social + wallet + minimap chrome
+  const session = readSession();
+  const myName = (session && session.username) || 'You';
+  social = createSocialUI({
+    myName,
+    names: NPCS.map((n) => n.name).filter(Boolean).slice(0, 24),
+  });
+  walletStatus = createWalletStatus();
+  minimap = createSimpleMinimap(world);
+  game.social = social;
+  game.minimap = minimap;
+
+  shadowTut = createShadowTutorial({
+    audio,
+    menuTarget: document.getElementById('btn-home'),
+    onUi: () => audio.play('click'),
+  });
+  game.shadowTutorial = shadowTut;
+
   // Content registration
   for (const s of DEFAULT_SPOTS) fishing.registerSpot(s);
   if (foraging.registerDefaults) foraging.registerDefaults();
@@ -377,6 +402,7 @@ async function boot() {
   }
 
   wireEvents();
+  wireGameChrome();
   quests.refreshAvailability();
   checkRecipeUnlocks(state);
   // ?q=0|1|2 forces a quality tier — handy for low-end machines and for the
@@ -384,7 +410,35 @@ async function boot() {
   const qParam = new URLSearchParams(location.search).get('q');
   applyQuality(qParam != null ? Number(qParam) : state.settings.quality);
 
-  showStartScreen();
+  // Landing page first; smoke / ?play=1 can skip straight in.
+  landing = createLanding({
+    audio,
+    onPlay: (sess) => {
+      walletStatus = createWalletStatus();
+      if (social && sess && sess.username) social.setNames([
+        sess.username,
+        ...NPCS.map((n) => n.name).filter(Boolean).slice(0, 20),
+      ]);
+      showStartScreen();
+    },
+  });
+  game.landing = landing;
+
+  const params = new URLSearchParams(location.search);
+  const autoPlay = params.has('smoke') || params.get('play') === '1' || params.has('q');
+  if (autoPlay) {
+    if (!readSession()) {
+      writeSession({
+        username: 'SmokeChef',
+        wallet: { provider: 'demo', address: 'DemoSmokeWallet000000000000000000000001' },
+        at: Date.now(),
+      });
+    }
+    if (landing) landing.hide();
+    walletStatus = createWalletStatus();
+    showStartScreen();
+    // Smoke test clicks #start-new — keep the start overlay ready.
+  }
 }
 
 // ===========================================================================
@@ -453,26 +507,91 @@ function onResize() {
 }
 
 // ===========================================================================
-// Start screen
+// Start screen + chrome
 // ===========================================================================
+function wireGameChrome() {
+  const home = document.getElementById('btn-home');
+  const mute = document.getElementById('btn-mute');
+  if (home) {
+    home.addEventListener('click', () => {
+      audio.play('ui_close');
+      try { save.save('auto'); } catch { /* best effort */ }
+      // Soft return: hide game HUD, show landing again (world keeps ticking quietly).
+      showGameChrome(false);
+      if (social) social.hide();
+      if (minimap) minimap.hide();
+      if (walletStatus) walletStatus.hide();
+      game.setMode('boot');
+      gameStarted = false;
+      if (landing) landing.show();
+      const overlay = document.getElementById('start');
+      if (overlay) {
+        overlay.classList.remove('show', 'gone', 'ready');
+        overlay.style.display = 'none';
+      }
+    });
+  }
+  if (mute) {
+    mute.addEventListener('click', () => {
+      muted = !muted;
+      if (muted) {
+        audio.setMaster(0);
+        mute.textContent = '♪̸';
+      } else {
+        audio.applySettings(state.settings);
+        mute.textContent = '♪';
+      }
+      audio.play('click');
+    });
+  }
+  document.querySelectorAll('[data-buy-coin]').forEach((btn) => {
+    if (btn.dataset.boundBuy) return;
+    btn.dataset.boundBuy = '1';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.open(GAME.pumpfunUrl || 'https://pump.fun', '_blank', 'noopener,noreferrer');
+    });
+  });
+}
+
+function showGameChrome(on) {
+  const chrome = document.getElementById('game-chrome');
+  if (chrome) chrome.classList.toggle('show', !!on);
+  if (on) {
+    if (social) social.show();
+    if (minimap) minimap.show();
+    if (walletStatus) walletStatus.show();
+  }
+}
+
 function showStartScreen() {
   const overlay = document.getElementById('start');
   if (!overlay) { begin(false); return; }
+  overlay.style.display = 'flex';
+  overlay.classList.add('show');
+  overlay.classList.remove('gone');
   const cont = document.getElementById('start-continue');
   const fresh = document.getElementById('start-new');
   const hasSave = save.hasAny();
   if (cont) {
     cont.style.display = hasSave ? '' : 'none';
-    cont.addEventListener('click', () => { const r = save.load('auto'); begin(!!r.ok); });
+    cont.onclick = () => { const r = save.load('auto'); begin(!!r.ok); };
   }
-  if (fresh) fresh.addEventListener('click', () => begin(false));
+  if (fresh) fresh.onclick = () => begin(false);
   overlay.classList.add('ready');
 }
 
 function begin(loaded) {
   const overlay = document.getElementById('start');
-  if (overlay) overlay.classList.add('gone');
+  if (overlay) {
+    overlay.classList.add('gone');
+    setTimeout(() => { overlay.classList.remove('show'); overlay.style.display = 'none'; }, 500);
+  }
   audio.unlock();
+  audio.setMusicTrack('neon');
+  audio.setAmbience('market');
+  gameStarted = true;
+  document.body.style.overflow = 'hidden';
 
   if (loaded) {
     const p = state.data.player;
@@ -495,8 +614,13 @@ function begin(loaded) {
   if (delivery && delivery.generateDaily) delivery.generateDaily();
   quests.refreshAvailability();
 
-  // The guide owns the waypoint from here on: it picks the single next thing
-  // and points the compass, the map, the banner and the arrows all at it.
+  showGameChrome(true);
+
+  // Shadow cursor controls tutorial first; day-one loop tutorial after.
+  const params = new URLSearchParams(location.search);
+  const skipShadow = params.has('smoke') || params.get('skipTutorial') === '1';
+  if (!skipShadow && shadowTut) shadowTut.start();
+
   if (tutorial) {
     if (loaded) tutorial.syncFromState();
     else if (state.settings.tutorial !== false) tutorial.restart();
@@ -517,7 +641,7 @@ function animate() {
   renderer.info.reset();
 
   try {
-    if (mode !== 'boot') {
+    if (mode !== 'boot' && gameStarted) {
       clock.update(dt);
       player.update(dt);
       const p = player.position;
@@ -535,11 +659,14 @@ function animate() {
       quests.update(dt);
       // Tutorial first (it may advance a step), then the guide (which reads it),
       // then the guide's visuals (which read the guide).
+      if (shadowTut) shadowTut.update(dt);
       tutorial.update(dt);
       guide.update(dt);
       guideUI.update(dt);
       ui.update(dt);
       audio.update(dt);
+      if (social) social.update(dt, p);
+      if (minimap) minimap.update(p.x, p.z, player.yaw || 0);
 
       if (mode === 'explore') interactions.update(p.x, p.z);
 
@@ -554,6 +681,11 @@ function animate() {
 
       acc += dt;
       if (DEBUG.showStats && acc > 0.5) { acc = 0; logStats(); }
+    } else {
+      // Idle boot / landing: keep a soft night sky render alive.
+      applyDayNight(0.55, 20);
+      sky.position.copy(camera.position);
+      audio.update(dt);
     }
   } catch (err) {
     console.error('[main] frame error', err);
@@ -588,17 +720,20 @@ function logStats() {
 // Exposed for the headless smoke test in tools/smoke.mjs and for debugging.
 // Read-only in spirit — nothing in the game reads back off it.
 window.__sushi = game;
+window.__catoshi = game;
 
 // index.html ships a static placeholder; the real name lives in config.js.
 try { document.title = `${GAME.title} — ${GAME.tagline}`; } catch { /* non-DOM host */ }
 
 boot().then(() => {
-  console.info(`%c${GAME.title} %c${GAME.tagline}`, 'font-weight:bold', 'color:#c8503f');
+  console.info(`%c${GAME.title} %c${GAME.tagline}`, 'font-weight:bold', 'color:#8b5cf6');
   animate();
 }).catch((err) => {
   console.error('[main] boot failed', err);
   const overlay = document.getElementById('start');
   if (overlay) {
+    overlay.style.display = 'flex';
+    overlay.classList.add('show', 'ready');
     const p = overlay.querySelector('.start-error');
     if (p) { p.textContent = 'Something went wrong starting the game. Check the console.'; p.style.display = 'block'; }
   }

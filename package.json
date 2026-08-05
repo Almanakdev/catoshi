@@ -1,7 +1,7 @@
 {
-  "name": "catushi",
+  "name": "catoshi",
   "version": "1.0.0",
-  "description": "Catushi — a cozy semi-open-world game about a cat who dreams of becoming the greatest sushi master in the city.",
+  "description": "CATOSHI — a cozy semi-open-world game about a blue chef-cat who dreams of becoming the greatest sushi master in Slice City.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.5.5",
+    "gsap": "^3.15.0",
     "three": "^0.169.0"
   },
   "devDependencies": {

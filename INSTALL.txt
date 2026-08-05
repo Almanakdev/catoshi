@@ -1,0 +1,42 @@
+CATUSHI — install
+=================
+
+1. Unzip this folder into:
+      ~/Documents/ROXX/2. MOCKUP/
+   so you end up with:
+      ~/Documents/ROXX/2. MOCKUP/CATUSHI/
+
+2. Open Terminal there and run:
+      cd ~/Documents/ROXX/2\ MOCKUP/CATUSHI      # note: your folder is "2. MOCKUP"
+      npm install
+      npm run dev
+
+   npm install takes a minute the first time. If you want to skip it, copy the
+   node_modules folder from ENGINE CITY or SUSHI PAWS into here instead — the
+   dependencies are identical.
+
+3. The browser opens by itself. Click "New Game".
+
+
+What is in here
+---------------
+  src/          all the game code
+  docs/         AUDIT.md (what the engine had), ROADMAP.md (decisions and what
+                is left), DEVLOG.md (what changed and what broke)
+  tools/        smoke.mjs — headless playthrough test
+  .git/         full history, three commits:
+                  engine-baseline   the untouched ENGINE CITY source
+                  milestone-1       Sushi Paws, phases 1-5
+                  milestone-2       Catushi (this build)
+                `git diff engine-baseline` shows everything that changed.
+
+There are no asset files at all — every texture, model and sound is generated
+in code. To use your own cat model, drop a .glb or .vrm into public/models/ and
+set CAT_MODEL_URL in src/config.js.
+
+
+Controls
+--------
+  WASD move · Shift run · Space jump · drag to look · wheel zooms
+  E interact   I basket   R recipes   Q journal   M map   U upgrades
+  F meow   G sit   Esc menu

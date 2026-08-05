@@ -10,7 +10,7 @@ import { SAVE_VERSION } from './state.js';
 
 const PREFIX = 'catushi.save.';
 const SETTINGS_KEY = 'catushi.settings';
-// The game shipped as "Sushi Paws" before it was renamed to Catushi. Saves
+// The game shipped as "Sushi Paws" / "Catushi" before CATOSHI. Saves
 // written under the old namespace are adopted once, on first run, so a rename
 // never costs anybody their shop.
 const LEGACY_PREFIX = 'sushipaws.save.';

@@ -3,99 +3,366 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8D%A3%3C/text%3E%3C/svg%3E" />
-<title>Catushi — From street cat to sushi legend</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/brand/catoshi-logo.jpg" />
+<title>CATOSHI — Blue cat. Neon knives. Slice City.</title>
+<link rel="stylesheet" href="/src/landing/landing.css" />
 <style>
-  :root { color-scheme: light; }
+  :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0; padding: 0; height: 100%; overflow: hidden;
-    background: #f6ead2;
-    font-family: "Hiragino Maru Gothic ProN", "Quicksand", ui-rounded, "Nunito", system-ui, sans-serif;
-    color: #3b2f26;
+    margin: 0; padding: 0; height: 100%;
+    background: #12081f;
+    font-family: "Plus Jakarta Sans", "Hiragino Maru Gothic ProN", system-ui, sans-serif;
+    color: #f8f0ff;
     -webkit-font-smoothing: antialiased;
   }
   #app { position: fixed; inset: 0; }
   #app canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
-  /* ---------------------------------------------------------------- start */
+  /* In-game start (continue / new) after wallet */
   #start {
     position: fixed; inset: 0; z-index: 100;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
     gap: 18px; text-align: center;
-    background: radial-gradient(120% 90% at 50% 8%, #ffe9c4 0%, #f3cf9c 42%, #e0a878 100%);
+    background: radial-gradient(120% 90% at 50% 8%, #4a2878 0%, #2a1450 42%, #12081f 100%);
     transition: opacity .5s ease;
   }
+  #start.show { display: flex; }
   #start.gone { opacity: 0; pointer-events: none; }
-  #start .mark {
-    font-size: 74px; line-height: 1;
-    filter: drop-shadow(0 6px 0 rgba(140, 90, 50, .18));
+  #start .mark img {
+    width: 96px; height: 96px; object-fit: contain;
+    filter: drop-shadow(0 8px 20px rgba(255,122,154,.35));
     animation: bob 3.2s ease-in-out infinite;
   }
-  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg) } 50% { transform: translateY(-10px) rotate(3deg) } }
+  @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
   #start h1 {
-    margin: 0; font-size: clamp(38px, 7vw, 68px); font-weight: 900; letter-spacing: .01em;
-    color: #b8412f;
-    text-shadow: 0 3px 0 #fff6e4, 0 8px 20px rgba(140, 70, 40, .22);
+    margin: 0; font-size: clamp(38px, 7vw, 64px); font-weight: 900; letter-spacing: .02em;
+    background: linear-gradient(135deg, #ff7a9a, #c4b5fd);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
   }
-  #start .tag { margin: -6px 0 6px; font-size: clamp(14px, 2.2vw, 19px); font-weight: 700; color: #7a5741; }
+  #start .tag { margin: -6px 0 6px; font-size: clamp(14px, 2.2vw, 18px); font-weight: 700; color: rgba(248,240,255,.75); }
   #start .btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
   #start button {
     font-family: inherit; font-weight: 800; font-size: 16px;
     padding: 12px 30px; border-radius: 16px; cursor: pointer;
-    border: 2px solid rgba(80, 45, 30, .18);
-    background: linear-gradient(180deg, #fff8ea, #f4e2bd);
-    color: #3b2f26; box-shadow: 0 5px 0 rgba(120, 75, 45, .28);
-    transition: transform .08s, box-shadow .08s, filter .12s;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.08); color: #fff;
+    transition: transform .08s, filter .12s;
   }
-  #start button:hover { filter: brightness(1.05); }
-  #start button:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(120, 75, 45, .28); }
-  #start button.primary { background: linear-gradient(180deg, #e0765d, #c8503f); color: #fff6ec; border-color: rgba(0,0,0,.14); }
-  #start .hints {
-    margin-top: 18px; font-size: 13px; font-weight: 700; color: #7a5741;
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 6px 18px; max-width: 620px; padding: 0 20px;
+  #start button:hover { filter: brightness(1.08); }
+  #start button.primary {
+    background: linear-gradient(135deg, #ff7a9a, #8b5cf6);
+    border-color: transparent;
   }
-  #start .hints kbd {
-    display: inline-block; background: #3b2f26; color: #f6ead2;
-    border-radius: 6px; padding: 1px 7px; font-family: inherit; font-size: 12px; margin-right: 5px;
-  }
-  #start .loading { font-size: 14px; font-weight: 700; color: #8a6448; }
+  #start .loading { font-size: 14px; font-weight: 700; color: rgba(248,240,255,.65); }
   #start.ready .loading { display: none; }
-  #start:not(.ready) .btns, #start:not(.ready) .hints { display: none; }
-  #start .start-error { display: none; color: #a83a2a; font-weight: 800; max-width: 480px; padding: 0 20px; }
-  #start .build { position: absolute; bottom: 12px; right: 14px; font-size: 11px; font-weight: 700; color: rgba(90,60,40,.5); }
+  #start:not(.ready) .btns { display: none; }
+  #start .start-error { display: none; color: #ff8a8a; font-weight: 800; max-width: 480px; padding: 0 20px; }
+  #start .build { position: absolute; bottom: 12px; right: 14px; font-size: 11px; font-weight: 700; color: rgba(248,240,255,.4); }
 </style>
 </head>
 <body>
   <div id="app"></div>
 
+  <!-- ===================== LANDING ===================== -->
+  <div id="landing" aria-label="CATOSHI landing">
+    <nav class="lp-nav">
+      <a class="lp-brand" href="#home" data-page="home">
+        <img src="/brand/catoshi-logo.jpg" alt="CATOSHI" />
+        <span>CATOSHI</span>
+      </a>
+      <div class="lp-nav-links">
+        <button type="button" data-page="lore">Lore</button>
+        <button type="button" data-page="earn">How to earn</button>
+        <button type="button" data-page="tokenomics">Tokenomics</button>
+        <button type="button" data-page="whitepaper">Whitepaper</button>
+      </div>
+      <div class="lp-nav-cta">
+        <span class="lp-online"><span class="dot"></span><span data-online-count>796 players online</span></span>
+        <a class="lp-btn lp-btn-x" data-twitter title="X / Twitter" aria-label="X">𝕏</a>
+        <button type="button" class="lp-btn lp-btn-buy" data-buy-coin>Buy Coin</button>
+        <button type="button" class="lp-btn lp-btn-primary" data-play-now>Play Now</button>
+      </div>
+    </nav>
+
+    <div id="lp-main">
+      <main class="flow-main" aria-label="CATOSHI story">
+        <!-- 01 Hero -->
+        <section data-flow-section aria-label="Hero" style="background: linear-gradient(165deg,#1a0a30 0%,#3a1468 45%,#6b2d8a 100%); color:#fff;">
+          <div class="flow-art-container">
+            <p class="flow-kicker">01 — Slice City</p>
+            <hr class="flow-rule" />
+            <div>
+              <h1 class="flow-title">CATOSHI<br>Runs<br>The<br>Night</h1>
+            </div>
+            <hr class="flow-rule" />
+            <p class="flow-lead">
+              A blue chef-cat with a white headband. A purplish neon city. One sushi stall that could change everything.
+            </p>
+            <button type="button" class="flow-more" data-read-more="hero">Read more</button>
+            <div class="flow-full" data-full="hero">
+              CATOSHI is a cozy semi-open-world browser game: buy ingredients, cook perfect plates, serve hungry cats, and grow your stall from street cart to legendary destination — all in Slice City after dark.
+            </div>
+            <div class="lp-hero-actions">
+              <button type="button" class="lp-btn lp-btn-primary" data-play-now>Play Now</button>
+              <button type="button" class="lp-btn lp-btn-buy" data-buy-coin>Buy Coin</button>
+              <button type="button" class="lp-ca" data-copy-ca title="Copy contract address">
+                <span class="ca-label">CA</span>
+                <span class="ca-addr">…</span>
+                <span class="ca-act">Copy</span>
+              </button>
+              <a class="lp-btn lp-btn-x" data-twitter title="X / Twitter">𝕏</a>
+            </div>
+            <img class="lp-hero-art" src="/brand/hero-city.png" alt="CATOSHI Tokyo Kitchen in neon Slice City" />
+          </div>
+        </section>
+
+        <!-- 02 Lore teaser -->
+        <section data-flow-section aria-label="Lore" style="background:#0a0614; color:#fff;">
+          <div class="flow-art-container">
+            <p class="flow-kicker">02 — What is Slice City</p>
+            <hr class="flow-rule" />
+            <div><h2 class="flow-title">Neon<br>Alleys.<br>Hot<br>Rice.</h2></div>
+            <hr class="flow-rule" />
+            <p class="flow-lead">A Japanese-inspired night city of market lanes, harbor docks, and a food street that never sleeps.</p>
+            <button type="button" class="flow-more" data-read-more="slice">Read more</button>
+            <div class="flow-full" data-full="slice">
+              Slice City is the playground: Old Market, Harbor, Downtown, Suburbs, and the Festival strip. Unlock districts as your reputation climbs. Master Kuro waits in the market — the rest is up to your paws.
+            </div>
+            <button type="button" class="lp-btn" data-page="lore">Full lore →</button>
+          </div>
+        </section>
+
+        <!-- 03 How to earn teaser -->
+        <section data-flow-section aria-label="How to earn" style="background:#F5F0E8; color:#1a0a20;">
+          <div class="flow-art-container">
+            <p class="flow-kicker">03 — How to earn</p>
+            <hr class="flow-rule" style="opacity:.35" />
+            <div><h2 class="flow-title">Cook.<br>Serve.<br>Stack.</h2></div>
+            <hr class="flow-rule" style="opacity:.35" />
+            <p class="flow-lead">Three loops. Zero fluff. Tips, reputation, and upgrades compound fast.</p>
+            <div class="flow-grid">
+              <div class="flow-card"><h3>01 — Cook</h3><p>Hit timing prompts. Perfect grades pay more.</p></div>
+              <div class="flow-card"><h3>02 — Serve</h3><p>Beat customer patience. Chain rush hours.</p></div>
+              <div class="flow-card"><h3>03 — Grow</h3><p>Upgrade the stall. Unlock recipes &amp; districts.</p></div>
+            </div>
+            <button type="button" class="flow-more" data-read-more="earn">Read more</button>
+            <div class="flow-full" data-full="earn">
+              Deliveries, fishing, foraging, and quests fill the gaps between lunch rushes. Better reputation multiplies tips. The day-end summary shows what you netted — then sleep and do it again.
+            </div>
+            <button type="button" class="lp-btn" style="color:#1a0a20;border-color:rgba(0,0,0,.2)" data-page="earn">How to earn →</button>
+          </div>
+        </section>
+
+        <!-- 04 Tokenomics teaser -->
+        <section data-flow-section aria-label="Tokenomics" style="background:#1A3DE8; color:#fff;">
+          <div class="flow-art-container">
+            <p class="flow-kicker">04 — Tokenomics</p>
+            <hr class="flow-rule" />
+            <div><h2 class="flow-title">$CATOSHI<br>On<br>Chain</h2></div>
+            <hr class="flow-rule" />
+            <p class="flow-lead">Community-first. Fair launch vibes. Play the game, hold the culture coin.</p>
+            <div class="flow-grid">
+              <div class="flow-card"><h3>Play</h3><p>In-game grind is free. Skill is the edge.</p></div>
+              <div class="flow-card"><h3>Hold</h3><p>Buy on pump.fun — same CA on the home page.</p></div>
+              <div class="flow-card"><h3>Vibe</h3><p>Blue cat energy. Neon city. Sushi forever.</p></div>
+            </div>
+            <button type="button" class="flow-more" data-read-more="tok">Read more</button>
+            <div class="flow-full" data-full="tok">
+              Full allocation, supply notes, and roadmap live on the Tokenomics page. Always verify the CA before buying.
+            </div>
+            <div class="lp-hero-actions">
+              <button type="button" class="lp-btn lp-btn-buy" data-buy-coin>Buy Coin</button>
+              <button type="button" class="lp-btn" data-page="tokenomics">Tokenomics →</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 05 Join / CTA -->
+        <section data-flow-section aria-label="Join" style="background:#000; color:#fff;">
+          <div class="flow-art-container">
+            <p class="flow-kicker">05 — Join us</p>
+            <hr class="flow-rule" />
+            <div><h2 class="flow-title">Ready<br>To<br>Slice?</h2></div>
+            <hr class="flow-rule" />
+            <p class="flow-lead">Connect a wallet (or demo), put on the headband, and open the stall.</p>
+            <div class="lp-hero-actions">
+              <button type="button" class="lp-btn lp-btn-primary" data-play-now>Play Now</button>
+              <button type="button" class="lp-btn lp-btn-buy" data-buy-coin>Buy Coin</button>
+              <button type="button" class="lp-ca" data-copy-ca>
+                <span class="ca-label">CA</span>
+                <span class="ca-addr">…</span>
+                <span class="ca-act">Copy</span>
+              </button>
+              <a class="lp-btn lp-btn-x" data-twitter>𝕏</a>
+            </div>
+            <img src="/brand/catoshi-logo.jpg" alt="" style="width:120px;margin-top:auto;opacity:.9;filter:drop-shadow(0 8px 24px rgba(255,122,154,.3))" />
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Subpages (nav owns these; main scroll sections stay above) -->
+    <section id="page-lore" class="lp-page" style="background:#12081f">
+      <button type="button" class="back" data-back-main>← Back to home</button>
+      <h1>Lore — What is Slice City?</h1>
+      <p>Slice City is a semi-open night metropolis where cats cook, trade, and chase reputation under purple neon. Alleys hum with lantern light. The harbor smells like soy and salt. Downtown never blinks.</p>
+      <h2>The blue chef</h2>
+      <p>CATOSHI is a street cat who stood up, tied a white headband, and decided sushi was destiny. Master Kuro still teaches in the market. The rest of the city watches to see if the stall makes it.</p>
+      <h2>Districts</h2>
+      <ul>
+        <li><strong>Old Market</strong> — rice, fish, and your first customers.</li>
+        <li><strong>Harbor</strong> — fishing spots and late deliveries.</li>
+        <li><strong>Downtown</strong> — glass towers, office cats, bigger tips.</li>
+        <li><strong>Suburbs</strong> — quiet gardens and foraging.</li>
+        <li><strong>Festival strip</strong> — neon food street energy.</li>
+      </ul>
+      <button type="button" class="lp-btn lp-btn-primary" data-play-now style="margin-top:24px">Play Now</button>
+    </section>
+
+    <section id="page-earn" class="lp-page" style="background:#12081f">
+      <button type="button" class="back" data-back-main>← Back to home</button>
+      <h1>How to earn</h1>
+      <p>Everything funnels into coins, XP, and reputation. Reputation unlocks districts and shop tiers. Coins buy upgrades and ingredients.</p>
+      <h2>Core loop</h2>
+      <ol>
+        <li>Buy supplies at stalls (E).</li>
+        <li>Open your shop, take orders, cook on the timing mini-game.</li>
+        <li>Serve before patience runs out — better grades = better tips.</li>
+        <li>Optional: deliveries, fishing, foraging, quests.</li>
+        <li>End of day: summary, sleep, upgrade, repeat.</li>
+      </ol>
+      <h2>$CATOSHI</h2>
+      <p>The culture coin lives on pump.fun. Playing is free; buying is optional. Always check the CA on the home page.</p>
+      <div class="lp-hero-actions" style="margin-top:20px">
+        <button type="button" class="lp-btn lp-btn-buy" data-buy-coin>Buy Coin</button>
+        <button type="button" class="lp-btn lp-btn-primary" data-play-now>Play Now</button>
+      </div>
+    </section>
+
+    <section id="page-tokenomics" class="lp-page" style="background:#12081f">
+      <button type="button" class="back" data-back-main>← Back to home</button>
+      <h1>Tokenomics</h1>
+      <p>Placeholder structure for launch — update numbers when the mint is final. Verify CA before any purchase.</p>
+      <table class="lp-token-table">
+        <thead><tr><th>Bucket</th><th>Share</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Liquidity / fair launch</td><td>70%</td><td>pump.fun pool</td></tr>
+          <tr><td>Community &amp; rewards</td><td>15%</td><td>events, quests, creators</td></tr>
+          <tr><td>Treasury</td><td>10%</td><td>dev, art, servers</td></tr>
+          <tr><td>Team</td><td>5%</td><td>vested</td></tr>
+        </tbody>
+      </table>
+      <button type="button" class="lp-ca" data-copy-ca>
+        <span class="ca-label">CA</span>
+        <span class="ca-addr">…</span>
+        <span class="ca-act">Copy</span>
+      </button>
+      <div class="lp-hero-actions" style="margin-top:20px">
+        <button type="button" class="lp-btn lp-btn-buy" data-buy-coin>Buy Coin</button>
+      </div>
+    </section>
+
+    <section id="page-whitepaper" class="lp-page" style="background:#12081f">
+      <button type="button" class="back" data-back-main>← Back to home</button>
+      <h1>Whitepaper</h1>
+      <p><strong>CATOSHI</strong> is a browser-native cozy sim: cook sushi as a blue anthropomorphic chef-cat in a purplish neon Japanese city. No install. No asset packs — procedural art and synthesised audio.</p>
+      <h2>Vision</h2>
+      <p>Make “one more day” irresistible: short loops, readable feedback, and a city that looks like the brand art after dark.</p>
+      <h2>Systems</h2>
+      <ul>
+        <li>Open-world districts with day/night cycle</li>
+        <li>Cooking mini-game, orders, restaurant upgrades</li>
+        <li>Quests, deliveries, fishing, foraging</li>
+        <li>Save slots, tutorial, social chat simulation</li>
+      </ul>
+      <h2>Token</h2>
+      <p>$CATOSHI is the culture coin on Solana via pump.fun. It is not required to play. Game progress is local-first.</p>
+      <button type="button" class="lp-btn lp-btn-primary" data-play-now style="margin-top:24px">Play Now</button>
+    </section>
+  </div>
+
+  <!-- Wallet connect gate -->
+  <div id="wallet-gate" role="dialog" aria-modal="true" aria-labelledby="wg-title">
+    <div class="wg-card">
+      <h2 id="wg-title">Connect to play</h2>
+      <p class="sub">Pick a chef name and a wallet. Demo works offline — no extension required.</p>
+      <label for="wg-username">Username</label>
+      <input id="wg-username" type="text" maxlength="20" placeholder="e.g. BlueChef" autocomplete="username" />
+      <label>Wallet</label>
+      <div class="wg-wallets">
+        <button type="button" class="wg-wallet" data-wallet="phantom">
+          <img src="/brand/phantom.jpg" alt="" />
+          <span>Phantom</span>
+        </button>
+        <button type="button" class="wg-wallet" data-wallet="solflare">
+          <img src="/brand/solflare.jpeg" alt="" />
+          <span>Solflare</span>
+        </button>
+        <button type="button" class="wg-wallet selected" data-wallet="demo">
+          <span class="demo-ico">🍣</span>
+          <span>Demo Wallet</span>
+        </button>
+      </div>
+      <p class="wg-err"></p>
+      <div class="wg-actions">
+        <button type="button" class="lp-btn" data-wg-cancel>Cancel</button>
+        <button type="button" class="lp-btn lp-btn-primary" data-wg-connect>Enter Slice City</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-game continue / new -->
   <div id="start">
-    <div class="mark">🐱🍣</div>
-    <h1>Catushi</h1>
-    <div class="tag">From street cat to sushi legend.</div>
+    <div class="mark"><img src="/brand/catoshi-logo.jpg" alt="CATOSHI" /></div>
+    <h1>CATOSHI</h1>
+    <div class="tag">Blue cat. Neon knives. Slice City.</div>
     <div class="loading">Warming the rice…</div>
     <p class="start-error"></p>
     <div class="btns">
       <button id="start-continue" class="primary">Continue</button>
       <button id="start-new">New Game</button>
     </div>
-    <div class="hints">
-      <div><kbd>WASD</kbd>Move</div>
-      <div><kbd>Shift</kbd>Run</div>
-      <div><kbd>Space</kbd>Jump</div>
-      <div><kbd>E</kbd>Interact</div>
-      <div><kbd>I</kbd>Basket</div>
-      <div><kbd>R</kbd>Recipes</div>
-      <div><kbd>Q</kbd>Journal</div>
-      <div><kbd>M</kbd>Map</div>
-      <div><kbd>F</kbd>Meow</div>
-      <div><kbd>G</kbd>Sit</div>
-      <div><kbd>U</kbd>Upgrades</div>
-      <div><kbd>Esc</kbd>Menu</div>
-      <div><kbd>Drag</kbd>Look</div>
+    <div class="build">v0.5.0</div>
+  </div>
+
+  <!-- Game chrome -->
+  <div id="game-chrome">
+    <button type="button" class="gc-btn" id="btn-home">← Home</button>
+    <button type="button" class="gc-btn" id="btn-mute" title="Toggle audio">♪</button>
+    <button type="button" class="gc-btn" id="btn-buy-ingame" data-buy-coin>Buy Coin</button>
+  </div>
+
+  <div id="wallet">
+    <div class="w-name" id="wallet-name">—</div>
+    <div class="w-addr" id="wallet-addr">—</div>
+    <div class="w-prov" id="wallet-provider">—</div>
+  </div>
+
+  <div id="mm-backdrop"></div>
+  <div id="minimap-wrap">
+    <canvas id="minimap" width="200" height="168"></canvas>
+    <div id="mm-bar">
+      <span id="mm-info">Map</span>
+      <button type="button" id="mm-clear">Clear</button>
+      <button type="button" id="mm-close">Close</button>
     </div>
-    <div class="build">v0.4.0</div>
+  </div>
+
+  <div id="social">
+    <div id="leaderboard" class="panel">
+      <div class="head">Leaderboard <span class="sub" id="lb-count">0 online</span></div>
+      <div id="lb-list"></div>
+    </div>
+    <div id="chat" class="panel">
+      <div class="head">Chat <span class="sub">Enter to talk</span></div>
+      <div id="chat-feed"></div>
+      <form id="chat-form">
+        <input id="chat-input" type="text" maxlength="140" placeholder="Say something…" autocomplete="off" />
+        <button id="chat-send" type="submit">Send</button>
+      </form>
+    </div>
   </div>
 
   <script type="module" src="/src/main.js"></script>

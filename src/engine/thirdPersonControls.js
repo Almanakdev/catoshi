@@ -20,6 +20,11 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
     dist: 12, distMin: 5, distMax: 24,
     headScale: 3.0, headFactor: 0.7,
     cameraCollide: true, cameraPad: 0.45, cameraMin: 1.6,
+    // ENGINE FOREST-style over-the-shoulder calm follow
+    shoulderOffset: 0.55,
+    lookAhead: 0.85,
+    targetDamp: 13,
+    positionDamp: 11,
     ...opts,
   };
   const PLAYER_H = TUNE.playerH;
@@ -51,6 +56,10 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
   let camDist = TUNE.dist;
   const camRay = new THREE.Ray();
   const camHit = new THREE.Vector3();
+  // Smoothed look target + camera position (ENGINE FOREST CameraRig feel).
+  const smoothedTarget = new THREE.Vector3();
+  const desiredCam = new THREE.Vector3();
+  let camInit = false;
   const keys = Object.create(null);
   const clearKeys = () => { for (const k in keys) keys[k] = false; };
 
@@ -283,26 +292,42 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
       ? character.eyeHeight()
       : TUNE.headScale * character.group.scale.y;
     const headH = eyeH * (1 - 0.26 * crouch);
-    target.set(pos.x, pos.y + headH * TUNE.headFactor, pos.z);
+    // Look a touch ahead of facing so the path fills the frame (Forest OTS).
+    const faceY = character.group.rotation.y;
+    target.set(
+      pos.x + Math.sin(faceY) * TUNE.lookAhead,
+      pos.y + headH * TUNE.headFactor,
+      pos.z + Math.cos(faceY) * TUNE.lookAhead,
+    );
+    if (!camInit) { smoothedTarget.copy(target); camInit = true; }
+    const tK = 1 - Math.exp(-TUNE.targetDamp * dt);
+    smoothedTarget.lerp(target, tK);
+
     dir.set(
       Math.sin(state.yaw) * Math.cos(state.pitch),
       Math.sin(state.pitch),
       Math.cos(state.yaw) * Math.cos(state.pitch)
     );
+    // Soft right-shoulder bias so the cat sits lower-left in frame.
+    const rightX = Math.cos(state.yaw) * TUNE.shoulderOffset;
+    const rightZ = -Math.sin(state.yaw) * TUNE.shoulderOffset;
+    // Mild distance breathe while moving.
+    const breathe = dist + (speed > 0.5 ? (speed > TUNE.walk * 0.9 ? 0.9 : 0.35) : 0);
+
     // Camera collision: march back from the head toward the desired position and
     // stop at the first collider. Without this the camera sits inside the shop
     // cart whenever the player stands at their own counter.
-    let useDist = dist;
+    let useDist = breathe;
     if (TUNE.cameraCollide) {
-      camRay.origin.copy(target);
+      camRay.origin.copy(smoothedTarget);
       camRay.direction.copy(dir).negate();
-      let nearest = dist;
+      let nearest = breathe;
       for (const b of colliders) {
         // Skip boxes the ray starts inside — the player's own footprint.
-        if (b.containsPoint(target)) continue;
+        if (b.containsPoint(smoothedTarget)) continue;
         const hit = camRay.intersectBox(b, camHit);
         if (!hit) continue;
-        const d = target.distanceTo(camHit) - TUNE.cameraPad;
+        const d = smoothedTarget.distanceTo(camHit) - TUNE.cameraPad;
         if (d < nearest) nearest = d;
       }
       useDist = Math.max(TUNE.cameraMin, nearest);
@@ -310,9 +335,13 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
       camDist += (useDist - camDist) * Math.min(1, dt * (useDist < camDist ? 22 : 6));
       useDist = camDist;
     }
-    camera.position.copy(target).addScaledVector(dir, -useDist);
+    desiredCam.copy(smoothedTarget).addScaledVector(dir, -useDist);
+    desiredCam.x += rightX;
+    desiredCam.z += rightZ;
+    const pK = 1 - Math.exp(-TUNE.positionDamp * dt);
+    camera.position.lerp(desiredCam, pK);
     if (camera.position.y < 0.6) camera.position.y = 0.6;
-    camera.lookAt(target);
+    camera.lookAt(smoothedTarget);
   }
 
   // Look-only tick (no character movement): the same cursor-follow + drag +

@@ -195,10 +195,10 @@ function buildHachimaki(accent) {
 export function createCat(opts = {}) {
   const src = opts && typeof opts === 'object' ? opts : {};
   const col = {
-    fur: safeColor(src.fur, '#e8a55c'),
-    belly: safeColor(src.belly, '#f7ead6'),      // chef coat / muzzle / paw pads
-    accent: safeColor(src.accent, '#c8503f'),    // hachimaki, coat trim, nose
-    eye: safeColor(src.eye, '#2f2a24'),
+    fur: safeColor(src.fur, '#4a7ec8'),
+    belly: safeColor(src.belly, '#f4f7fb'),      // chef coat / muzzle / paw pads
+    accent: safeColor(src.accent, '#f5f5f5'),    // headband, coat trim, nose
+    eye: safeColor(src.eye, '#2a3d5c'),
   };
   const scale = Math.max(0.01, num(src.scale, 1));
   const lod = src.lod === 'npc' ? 'npc' : 'full';

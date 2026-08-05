@@ -266,24 +266,25 @@ const JP_FONT = '"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto S
  * recognisable as it grows: a cream paper panel in a timber frame, a muted-red
  * disc bearing 寿, two little cat ears, and the name.
  */
-export function makeSushiSign({ vertical = true, name = 'CATUSHI' } = {}) {
+export function makeSushiSign({ vertical = true, name = 'CATOSHI' } = {}) {
   const W = vertical ? 128 : 384;
   const H = vertical ? 384 : 112;
   const canvas = makeCanvas(W, H);
   const ctx = canvas.getContext('2d');
-  const RED = '#c8503f', CREAM = '#f4e6c6', FRAME = '#5a3a22';
+  // Neon-purple brand board (Slice City / pic 3 stall vibe).
+  const PURPLE = '#6b2d8a', CREAM = '#f8e8d0', FRAME = '#3a1848', NEON = '#ff7a9a';
 
   ctx.fillStyle = FRAME; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = CREAM; ctx.fillRect(9, 9, W - 18, H - 18);
-  ctx.fillStyle = RED;
+  ctx.fillStyle = PURPLE;
   ctx.fillRect(9, 9, W - 18, 16);
   ctx.fillRect(9, H - 25, W - 18, 16);
 
-  // House mark: a red disc with 寿 and a pair of cat ears.
+  // House mark: purple disc with paw + cat ears.
   const cr = vertical ? W * 0.32 : H * 0.32;
   const cx = vertical ? W / 2 : 60;
   const cy = vertical ? 34 + cr : H / 2;
-  ctx.fillStyle = RED;
+  ctx.fillStyle = PURPLE;
   ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath();
   ctx.moveTo(cx - cr * 0.72, cy - cr * 0.6); ctx.lineTo(cx - cr * 0.34, cy - cr * 1.12); ctx.lineTo(cx - cr * 0.1, cy - cr * 0.86);
@@ -293,23 +294,24 @@ export function makeSushiSign({ vertical = true, name = 'CATUSHI' } = {}) {
   ctx.closePath(); ctx.fill();
   ctx.fillStyle = CREAM;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `900 ${Math.round(cr * 1.25)}px ${JP_FONT}`;
+  ctx.font = `900 ${Math.round(cr * 1.05)}px ${JP_FONT}`;
   ctx.fillText('寿', cx, cy + cr * 0.06);
 
-  ctx.fillStyle = '#8f3a2c';
+  ctx.fillStyle = NEON;
   if (vertical) {
-    const chars = ['す', 'し', '猫'];
+    const chars = ['キ', 'ャ', 'ツ'];
     const top = 34 + cr * 2 + 26;
     const cell = (H - top - 34) / chars.length;
     ctx.font = `800 ${Math.round(Math.min(cell * 0.72, W * 0.5))}px ${JP_FONT}`;
     for (let i = 0; i < chars.length; i++) ctx.fillText(chars[i], W / 2, top + cell * (i + 0.5));
   } else {
     ctx.textAlign = 'left';
-    ctx.font = `800 34px ${JP_FONT}`;
+    ctx.font = `800 30px ${JP_FONT}`;
+    ctx.fillStyle = PURPLE;
     ctx.fillText(name, 108, H / 2 - 12);
-    ctx.font = `700 26px ${JP_FONT}`;
-    ctx.fillStyle = '#a8563f';
-    ctx.fillText('すし・猫', 108, H / 2 + 22);
+    ctx.font = `700 22px ${JP_FONT}`;
+    ctx.fillStyle = NEON;
+    ctx.fillText('TOKYO KITCHEN', 108, H / 2 + 20);
   }
   return finish(canvas, { tiled: false });
 }
@@ -1313,68 +1315,87 @@ export function buildFishMarketHall() {
  */
 export function buildSushiShop(tier = 1) {
   const t = Math.max(1, Math.min(5, Math.round(tier)));
-  const RED = '#c8503f', REDD = '#8f3a2c', CREAM = '#f2e3c2';
+  // CATOSHI stall palette — warm timber + lantern reds on purple-city nights (pic 3).
+  const RED = '#d94a3a', REDD = '#8f2a2c', CREAM = '#f2e3c2';
+  const WOOD = '#6b3f2a', WOODD = '#4a2a1a', PURPLE = '#6b2d8a';
   const s = [];
   const g = [];
   const neon = [];
 
   // -------------------------------------------------------------------------
-  // TIER 1 — Street Sushi Cart
+  // TIER 1 — Street Sushi Cart (cozy yatai: tiled roof, lanterns, sushi plates)
   // -------------------------------------------------------------------------
   if (t === 1) {
-    const w = 3.4, d = 2.4, hw = w / 2, hd = d / 2;
-    for (const wx of [-1, 1]) {
-      s.push(cyl(0.3, 0.3, 0.1, 12, wx * (hw - 0.3), 0.3, -0.4, P.timberD, [0, 0, Math.PI / 2]));
-      s.push(cyl(0.08, 0.08, 0.13, 8, wx * (hw - 0.3), 0.3, -0.4, C.metalDark, [0, 0, Math.PI / 2]));
-    }
-    s.push(box(w - 0.2, 0.13, d - 0.4, 0, 0.6, -0.1, P.timberD));
-    s.push(box(w - 0.3, 0.85, d - 0.7, 0, 1.1, -0.25, C.wood));
-    s.push(box(w, 0.13, d - 0.35, 0, 1.58, -0.2, '#9a6a3f'));                // counter
-    s.push(box(w - 0.4, 0.5, 0.12, 0, 1.28, hd - 0.05, RED));                // painted apron
-    s.push(box(0.09, 0.09, 0.9, hw - 0.1, 0.6, hd + 0.45, P.timberD, [0.3, 0, 0]));
-    s.push(box(0.09, 0.09, 0.9, -hw + 0.1, 0.6, hd + 0.45, P.timberD, [0.3, 0, 0]));
-    // Neta case + rice tub + a small brazier.
-    s.push(box(1.5, 0.36, 0.55, -0.7, 1.82, -0.35, '#9a6a3f'));
-    s.push(box(1.44, 0.3, 0.5, -0.7, 1.86, -0.35, C.glass));
-    for (let i = 0; i < 4; i++) s.push(box(0.24, 0.1, 0.3, -1.25 + i * 0.36, 1.78, -0.35, ['#e8724f', '#f0a04f', '#e0e0d0', '#e8845f'][i]));
-    s.push(cyl(0.3, 0.28, 0.3, 12, 1.05, 1.79, -0.35, P.timberD));
-    s.push(cyl(0.26, 0.26, 0.06, 12, 1.05, 1.94, -0.35, CREAM));
-    s.push(box(0.5, 0.06, 0.14, 0.3, 1.68, 0.2, P.timberD));                 // chopping board
-    s.push(box(0.34, 0.03, 0.1, 0.3, 1.72, 0.2, '#e8724f'));
-    // Fabric roof on four posts.
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      s.push(box(0.08, 1.1, 0.08, sx * (hw - 0.12), 2.15, sz * (hd - 0.2), P.timberD));
-    }
-    s.push(box(w + 0.5, 0.12, d + 0.6, 0, 2.72, -0.1, RED));
-    s.push(box(w + 0.55, 0.3, 0.1, 0, 2.53, hd + 0.22, REDD));
-    s.push(box(w + 0.55, 0.3, 0.1, 0, 2.53, -hd - 0.4, REDD));
-    // Two stools, two lanterns, the shop sign.
-    for (const sx of [-0.85, 0.85]) {
-      s.push(cyl(0.21, 0.21, 0.09, 10, sx, 0.58, hd + 0.55, P.timberD));
-      for (let i = 0; i < 3; i++) {
-        const a = (i / 3) * Math.PI * 2;
-        s.push(box(0.05, 0.53, 0.05, sx + Math.cos(a) * 0.12, 0.29, hd + 0.55 + Math.sin(a) * 0.12, C.metalDark));
+    const w = 3.8, d = 2.8, hw = w / 2, hd = d / 2;
+    // Raised timber platform
+    s.push(box(w + 0.4, 0.18, d + 0.5, 0, 0.12, -0.05, WOODD));
+    s.push(box(w + 0.2, 0.12, d + 0.3, 0, 0.28, -0.05, WOOD));
+    // Cart body + open service bay
+    s.push(box(w - 0.15, 1.15, d - 0.5, 0, 0.95, -0.2, WOOD));
+    s.push(box(w + 0.05, 0.14, d - 0.2, 0, 1.58, -0.1, '#8a5535')); // counter top
+    s.push(box(w - 0.3, 0.55, 0.12, 0, 1.25, hd - 0.08, RED));       // front apron
+    // Wave crest carving under counter
+    s.push(box(w - 0.5, 0.18, 0.08, 0, 0.55, hd - 0.02, WOODD));
+    // Back wall shelves + bottles
+    s.push(box(w - 0.4, 1.4, 0.12, 0, 1.9, -hd + 0.15, WOODD));
+    for (let row = 0; row < 2; row++) {
+      s.push(box(w - 0.7, 0.08, 0.22, 0, 1.45 + row * 0.45, -hd + 0.28, '#8a5535'));
+      for (let i = 0; i < 5; i++) {
+        const bx = -1.2 + i * 0.55;
+        s.push(cyl(0.08, 0.07, 0.22 + (i % 2) * 0.08, 8, bx, 1.58 + row * 0.45, -hd + 0.28, ['#c8503f', '#f0e8d0', '#4a7ec8', '#3a8f5a', '#e8b84a'][i]));
       }
     }
-    for (const lx of [-1.2, 1.2]) {
-      const L = lantern(lx, 2.15, hd + 0.3, { r: 0.2, h: 0.42, color: P.lantern, drop: 0.28 });
+    // Glass neta case + sushi plates on counter
+    s.push(box(1.55, 0.38, 0.58, -0.85, 1.82, -0.25, '#8a5535'));
+    s.push(box(1.48, 0.32, 0.52, -0.85, 1.86, -0.25, C.glass));
+    for (let i = 0; i < 4; i++) s.push(box(0.26, 0.1, 0.28, -1.4 + i * 0.38, 1.78, -0.25, ['#e8724f', '#f0a04f', '#e0e0d0', '#e8845f'][i]));
+    // Plates of sushi on the service ledge
+    for (const px of [-1.1, 0.05, 1.15]) {
+      s.push(cyl(0.22, 0.22, 0.04, 12, px, 1.68, hd - 0.55, '#f8f2e6'));
+      s.push(box(0.28, 0.08, 0.12, px, 1.74, hd - 0.55, ['#e8724f', '#f0c040', '#2a2a2a'][Math.abs(Math.round(px)) % 3]));
+    }
+    // Soy bottle + sake
+    s.push(cyl(0.07, 0.09, 0.28, 8, -1.55, 1.78, hd - 0.7, '#2a1a12'));
+    s.push(cyl(0.08, 0.06, 0.32, 8, 1.55, 1.8, hd - 0.65, '#f0ebe0'));
+    s.push(cyl(0.22, 0.2, 0.28, 12, 1.05, 1.78, -0.35, WOODD)); // rice tub
+    s.push(cyl(0.18, 0.18, 0.05, 12, 1.05, 1.94, -0.35, CREAM));
+    // Posts + tiled gable roof (pic 3)
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      s.push(box(0.12, 1.35, 0.12, sx * (hw - 0.15), 2.25, sz * (hd - 0.25), WOODD));
+    }
+    s.push(...tiledGable(w + 0.6, d + 0.5, 0, 2.95, -0.05, { col: '#5a3a2a', ridge: '#3a2418', rise: 0.85, over: 0.35, ribs: 7 }));
+    // Bamboo accent on the side
+    s.push(cyl(0.05, 0.05, 1.6, 6, hw + 0.15, 1.4, -0.4, '#6a8f4a'));
+    s.push(cyl(0.045, 0.045, 1.4, 6, hw + 0.22, 1.3, -0.55, '#5a7f3a'));
+    // Stools + hanging lanterns with paw / sushi motifs
+    for (const sx of [-1.0, 1.0]) {
+      s.push(cyl(0.22, 0.22, 0.09, 10, sx, 0.62, hd + 0.65, WOOD));
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2;
+        s.push(box(0.05, 0.55, 0.05, sx + Math.cos(a) * 0.12, 0.32, hd + 0.65 + Math.sin(a) * 0.12, C.metalDark));
+      }
+    }
+    for (const lx of [-1.35, 1.35]) {
+      const L = lantern(lx, 2.45, hd + 0.15, { r: 0.24, h: 0.48, color: '#e85a3a', drop: 0.32 });
       s.push(...L.parts); neon.push(...L.glow);
     }
-    g.push(box(w - 0.3, 0.1, d - 0.3, 0, 2.6, -0.15, P.paperWarm));
-    g.push(box(1.4, 0.26, 0.45, -0.7, 1.98, -0.35, P.paperWarm));
-    s.push(box(2.0, 0.5, 0.1, 0, 2.28, hd + 0.28, P.timberD));               // sign board backing
+    g.push(box(w - 0.2, 0.12, d - 0.2, 0, 2.85, -0.1, P.paperWarm));
+    g.push(box(1.45, 0.28, 0.48, -0.85, 2.0, -0.25, P.paperWarm));
+    // Noren under the eaves + CATOSHI sign
+    s.push(...noren(w * 0.55, 0.55, 0, 2.7, -hd + 0.2, { color: PURPLE, band: CREAM, panels: 3 }));
+    s.push(box(2.15, 0.55, 0.1, 0, 2.35, hd + 0.22, WOODD));
 
     return {
       structure: merge(s), glow: merge(g), neon: merge(neon),
-      sign: { x: 0, y: 2.28, z: hd + 0.34, w: 1.85, h: 0.44 },
-      signTex: makeSushiSign({ vertical: false }),
-      steamAnchor: { x: 1.05, y: 2.05, z: -0.35 },
-      door: { x: 0, z: hd + 0.9, yaw: 0 },
-      counterAnchor: { x: 0.2, y: 1.6, z: -0.2 },
-      queueAnchors: [{ x: 0, z: 2.2 }, { x: 0.5, z: 3.1 }, { x: -0.4, z: 4.0 }],
-      seatAnchors: [{ x: -0.85, z: hd + 0.55 }, { x: 0.85, z: hd + 0.55 }],
-      size: { w: 3.4, d: 2.4, h: 2.8 },
-      collider: { cx: 0, cz: -0.1, w: 3.6, d: 2.6, h: 2.8 },
+      sign: { x: 0, y: 2.35, z: hd + 0.28, w: 2.0, h: 0.48 },
+      signTex: makeSushiSign({ vertical: false, name: 'CATOSHI' }),
+      steamAnchor: { x: 1.05, y: 2.1, z: -0.35 },
+      door: { x: 0, z: hd + 1.0, yaw: 0 },
+      counterAnchor: { x: 0.15, y: 1.62, z: -0.15 },
+      queueAnchors: [{ x: 0, z: 2.4 }, { x: 0.5, z: 3.3 }, { x: -0.4, z: 4.2 }],
+      seatAnchors: [{ x: -1.0, z: hd + 0.65 }, { x: 1.0, z: hd + 0.65 }],
+      size: { w: 3.8, d: 2.8, h: 3.6 },
+      collider: { cx: 0, cz: -0.1, w: 4.0, d: 3.0, h: 3.6 },
     };
   }
 

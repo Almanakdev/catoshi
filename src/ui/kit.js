@@ -8,18 +8,18 @@
 let injected = false;
 
 export const THEME = {
-  cream: '#fbf3e2',
-  creamDeep: '#f2e4c8',
-  ink: '#3b2f26',
-  inkSoft: '#6d5a49',
-  red: '#c8503f',
-  redSoft: '#e87f6c',
+  cream: '#f8f0ff',
+  creamDeep: '#e8d8f8',
+  ink: '#1e1230',
+  inkSoft: '#5a4a6a',
+  red: '#c45a9a',
+  redSoft: '#ff7a9a',
   gold: '#f0b93f',
   green: '#7ea36a',
-  blue: '#5f97b8',
-  pink: '#e6a7bd',
+  blue: '#6b7fd7',
+  pink: '#ff7a9a',
   wood: '#a3764c',
-  shadow: 'rgba(59, 47, 38, 0.22)',
+  shadow: 'rgba(40, 20, 60, 0.28)',
 };
 
 const CSS = `

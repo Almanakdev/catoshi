@@ -161,28 +161,43 @@ export function createAudio(state) {
   }
 
   // ---------------------------------------------------------------- music
-  // A slow pentatonic arpeggio per district. Light, unobtrusive, never loops
-  // audibly because the step order wanders.
+  // A slow pentatonic arpeggio per district + a soft bass drone for "backsound".
+  // Neon track leans minor for the purplish city vibe.
   const SCALES = {
     market:   [NOTE.C4, NOTE.D4, NOTE.F4, NOTE.G4, NOTE.A4, NOTE.C5],
     harbor:   [NOTE.D4, NOTE.F4, NOTE.G4, NOTE.A4, NOTE.C5, NOTE.D5],
     downtown: [NOTE.E4, NOTE.G4, NOTE.A4, NOTE.B4, NOTE.D5, NOTE.E5],
     home:     [NOTE.C4, NOTE.E4, NOTE.G4, NOTE.A4, NOTE.C5, NOTE.E5],
     neon:     [NOTE.A4, NOTE.C5, NOTE.D5, NOTE.E5, NOTE.G5, NOTE.A5],
+    festival: [NOTE.G4, NOTE.A4, NOTE.C5, NOTE.D5, NOTE.E5, NOTE.G5],
   };
+
+  let bassTimer = 0;
 
   function setMusicTrack(key) { musicKey = key; }
 
   function updateMusic(dt) {
     if (!ctx || !started || !musicKey) return;
     musicTimer -= dt;
+    bassTimer -= dt;
+    // Soft low drone pulse so the city always has a "backsound" bed.
+    if (bassTimer <= 0) {
+      bassTimer = 2.4 + Math.random() * 0.8;
+      const scale = SCALES[musicKey] || SCALES.market;
+      const root = scale[0] * 0.5;
+      tone(root, { dur: 2.2, type: 'sine', gain: 0.028, dest: musicGain });
+      tone(root * 1.5, { dur: 2.0, type: 'triangle', gain: 0.012, dest: musicGain, delay: 0.05 });
+    }
     if (musicTimer > 0) return;
-    musicTimer = 0.62 + Math.random() * 0.5;
+    musicTimer = 0.55 + Math.random() * 0.45;
     const scale = SCALES[musicKey] || SCALES.market;
     musicStep = (musicStep + 1 + (Math.random() < 0.3 ? 1 : 0)) % scale.length;
     const f = scale[musicStep];
-    tone(f, { dur: 0.9, type: 'sine', gain: 0.055, dest: musicGain });
-    if (Math.random() < 0.35) tone(f * 0.5, { dur: 1.4, type: 'sine', gain: 0.035, dest: musicGain, delay: 0.12 });
+    tone(f, { dur: 0.95, type: 'sine', gain: 0.06, dest: musicGain });
+    if (Math.random() < 0.4) tone(f * 0.5, { dur: 1.4, type: 'sine', gain: 0.032, dest: musicGain, delay: 0.12 });
+    if (musicKey === 'neon' && Math.random() < 0.25) {
+      tone(f * 2, { dur: 0.35, type: 'triangle', gain: 0.02, dest: musicGain, delay: 0.2 });
+    }
   }
 
   function update(dt) { updateMusic(dt); }

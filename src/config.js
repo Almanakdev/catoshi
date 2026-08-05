@@ -1,9 +1,15 @@
 // Project-wide switches. Kept tiny and dependency-free so anything can import it.
 
 export const GAME = {
-  title: 'Catushi',
-  tagline: 'From street cat to sushi legend.',
-  build: '0.4.0-compact',
+  title: 'CATOSHI',
+  tagline: 'Blue cat. Neon knives. Slice City.',
+  build: '0.5.0-catoshi',
+  /** Contract address shown on the landing page (copy CA). Update when live. */
+  ca: 'CATOSHi1111111111111111111111111111111111',
+  /** All "Buy Coin" buttons open this. */
+  pumpfunUrl: 'https://pump.fun',
+  twitterUrl: 'https://x.com/catoshi',
+  sessionKey: 'catoshi:session',
 };
 
 /**
@@ -14,16 +20,16 @@ export const CAT_MODEL_URL = null;
 
 /**
  * Player cat look — also the fallback tint when no model is loaded.
- * `belly` is the chef coat, `accent` the hachimaki / coat trim / apron ties.
+ * Blue fur + white headband matches the CATOSHI brand art (pic 1).
+ * `belly` is the chef coat, `accent` the headband / coat trim / apron ties.
  */
 export const PLAYER_CAT = {
-  fur: '#e8a55c',
-  belly: '#f9efdd',
-  accent: '#c8503f',
-  eye: '#3a5f3a',
+  fur: '#4a7ec8',
+  belly: '#f4f7fb',
+  accent: '#f5f5f5',
+  eye: '#2a3d5c',
   scale: 1.0,
-  // A headband instead of the toque: from behind, the toque hides the ear
-  // silhouette and the cat stops reading as a cat at camera distance.
+  // White sports headband — ears stay readable at camera distance.
   hat: 'headband',
   apron: true,
   // The model's gait thresholds are normalised (idle < 0.15, walk < 3.2, run
@@ -63,8 +69,23 @@ export const RENDER = {
   shadowMapSize: 2048,
   fog: { near: 90, far: 340 },
   // Post-processing is opt-in per quality tier (see QUALITY below).
-  outlineColor: 0x4a3a2c,
+  // Cool ink edge so the purplish night city stays crisp.
+  outlineColor: 0x2a1a3c,
   outlineStrength: 0.42,
+};
+
+/** Purplish Slice City palette — sky / fog / grade (pic 2 vibe). */
+export const CITY_PALETTE = {
+  day:   { top: 0x6a5aad, mid: 0xb89ad4, bot: 0xf0d4e8 },
+  dusk:  { top: 0x3a2a6a, mid: 0xc86a9a, bot: 0xf0a878 },
+  dawn:  { top: 0x7a6abe, mid: 0xe8b0d0, bot: 0xf8d8e8 },
+  night: { top: 0x12081f, mid: 0x2a1450, bot: 0x4a2878 },
+  fogDay: 0xb89ad4,
+  hemiDay: 0xd8c8f0,
+  hemiNight: 0x3a2868,
+  sunDay: 0xffe8f0,
+  sunDusk: 0xffb0c8,
+  ambient: 0xf0e8ff,
 };
 
 export const QUALITY = [
