@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Three.js City — Character Prototype</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { height: 100%; overflow: hidden; background: #000; font-family: system-ui, sans-serif; }
+      #app { position: fixed; inset: 0; }
+      canvas { display: block; }
+
+      /* Start / pause overlay */
+      #overlay {
+        position: fixed; inset: 0; z-index: 20;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: rgba(8, 12, 20, 0.72); backdrop-filter: blur(4px);
+        color: #eef2f7; text-align: center; cursor: pointer;
+        transition: opacity 0.25s ease;
+      }
+      #overlay.hidden { opacity: 0; pointer-events: none; }
+      #overlay h1 { font-size: clamp(28px, 5vw, 52px); font-weight: 700; letter-spacing: -0.02em; }
+      #overlay p { margin-top: 14px; font-size: 16px; opacity: 0.85; max-width: 520px; line-height: 1.5; }
+      #overlay .cta { margin-top: 26px; padding: 12px 26px; border: 1px solid rgba(255,255,255,0.35);
+        border-radius: 999px; font-size: 15px; font-weight: 600; }
+      kbd { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 5px; padding: 2px 7px; font-family: ui-monospace, monospace; font-size: 13px; }
+
+      /* Minimap */
+      #mm-backdrop {
+        position: fixed; inset: 0; z-index: 11;
+        background: rgba(6, 10, 16, 0.55); backdrop-filter: blur(2px);
+        opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+      }
+      #mm-backdrop.show { opacity: 1; pointer-events: auto; }
+
+      #minimap-wrap {
+        position: fixed; top: 14px; right: 14px; z-index: 12;
+        opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+      }
+      #minimap-wrap.show { opacity: 1; pointer-events: auto; }
+      #minimap-wrap.expanded {
+        top: 50%; left: 50%; right: auto; transform: translate(-50%, -50%);
+      }
+      #minimap {
+        display: block; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18);
+        box-shadow: 0 6px 24px rgba(0,0,0,0.45); background: #2f8fce; cursor: pointer;
+      }
+      #mm-bar {
+        position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 1;
+        display: flex; align-items: center; gap: 8px; pointer-events: none;
+      }
+      #mm-info {
+        flex: 1; min-width: 0; font: 600 12px system-ui, sans-serif; color: #f5ead8;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.85); white-space: nowrap; overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #mm-clear, #mm-close {
+        pointer-events: auto; border: 1px solid rgba(255,255,255,0.25);
+        background: rgba(14,18,26,0.72); color: #f5ead8; border-radius: 6px;
+        font: 600 12px system-ui, sans-serif; cursor: pointer; padding: 3px 9px;
+      }
+      #mm-clear:hover, #mm-close:hover { background: rgba(30,38,52,0.9); }
+      #mm-close { display: none; }
+      #minimap-wrap.expanded #mm-close { display: inline-block; }
+      #mm-clear { display: none; }
+      #minimap-wrap.has-dest #mm-clear { display: inline-block; }
+
+      /* In-game clock */
+      #clock {
+        position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5;
+        color: #f5ead8; font-size: 15px; font-weight: 700; letter-spacing: 0.08em;
+        font-family: ui-monospace, monospace;
+        background: rgba(14, 18, 26, 0.55); padding: 6px 14px; border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.12);
+        opacity: 0; transition: opacity 0.25s ease; pointer-events: none;
+      }
+      #clock.show { opacity: 1; }
+
+      /* HUD */
+      #hud {
+        position: fixed; left: 14px; bottom: 14px; z-index: 5;
+        color: #dfe6ef; font-size: 12px; line-height: 1.6;
+        background: rgba(8, 12, 20, 0.45); padding: 8px 12px; border-radius: 8px;
+        pointer-events: none; opacity: 0; transition: opacity 0.25s ease;
+      }
+      #hud.show { opacity: 1; }
+
+      /* Customization panel */
+      #panel {
+        position: fixed; top: 14px; right: 14px; z-index: 15;
+        width: 210px; color: #eef2f7; font-size: 13px;
+        background: rgba(14, 18, 26, 0.86); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px; padding: 14px; backdrop-filter: blur(8px);
+        opacity: 0; transform: translateY(-6px); pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+      #panel.show { opacity: 1; transform: none; pointer-events: auto; }
+      #panel .title { font-weight: 700; font-size: 14px; margin-bottom: 10px; }
+      #panel .row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
+      #panel label { opacity: 0.9; }
+      #panel input[type="color"] {
+        width: 42px; height: 26px; border: none; border-radius: 6px; background: none; cursor: pointer;
+      }
+      #panel input[type="range"] { width: 110px; }
+      #panel .hint { margin-top: 10px; font-size: 11px; opacity: 0.6; line-height: 1.4; }
+
+      /* ------------------------------------------------------------------
+         Social overlays: leaderboard (top left) + chat (bottom right).
+         Same glass-panel language as the minimap / customize panel.
+         ------------------------------------------------------------------ */
+      #social { position: fixed; inset: 0; z-index: 10; pointer-events: none;
+        opacity: 0; transition: opacity 0.3s ease; }
+      #social.show { opacity: 1; }
+      #social .panel {
+        position: fixed; pointer-events: auto; color: #eef2f7;
+        background: rgba(14, 18, 26, 0.78); border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px; backdrop-filter: blur(8px);
+        box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+      }
+      #social .head {
+        display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+        padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.09);
+        font: 700 12px system-ui, sans-serif; letter-spacing: 0.09em;
+        text-transform: uppercase; color: #f5ead8;
+      }
+      #social .head .sub {
+        font: 600 10px ui-monospace, monospace; letter-spacing: 0.04em;
+        text-transform: none; opacity: 0.55;
+      }
+
+      /* Leaderboard */
+      #leaderboard { top: 14px; left: 14px; width: 218px; }
+      #lb-list { padding: 5px 6px 7px; }
+      .lb-row {
+        display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 8px;
+        padding: 4px 7px; border-radius: 6px;
+        font: 600 12px system-ui, sans-serif; line-height: 1.35;
+      }
+      .lb-row.me { background: rgba(255, 200, 110, 0.13); box-shadow: inset 0 0 0 1px rgba(255,200,110,0.22); }
+      .lb-rank { font: 700 11px ui-monospace, monospace; opacity: 0.5; text-align: right; }
+      .lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .lb-score { font: 700 12px ui-monospace, monospace; color: #f5ead8; opacity: 0.92; }
+
+      /* Chat */
+      #chat { right: 14px; bottom: 14px; width: 306px; display: flex; flex-direction: column; }
+      #chat-feed {
+        height: 176px; overflow-y: auto; overscroll-behavior: contain;
+        padding: 8px 11px; display: flex; flex-direction: column; gap: 3px;
+        font: 400 12px/1.45 system-ui, sans-serif; color: #dfe6ef;
+        scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.22) transparent;
+      }
+      #chat-feed::-webkit-scrollbar { width: 6px; }
+      #chat-feed::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+      /* Sit the feed on the bottom edge while it's short, without the
+         justify-content:flex-end scroll bug once it overflows. */
+      #chat-feed > :first-child { margin-top: auto; }
+      .chat-line { word-wrap: break-word; }
+      .chat-line .who { font-weight: 700; margin-right: 5px; }
+      .chat-line .who::after { content: ':'; opacity: 0.5; }
+      .chat-line.sys { font-style: italic; opacity: 0.55; font-size: 11px; }
+      .chat-line.me { color: #f5ead8; }
+      #chat-form { display: flex; gap: 6px; padding: 7px; border-top: 1px solid rgba(255,255,255,0.09); }
+      #chat-input {
+        flex: 1; min-width: 0; padding: 6px 10px; border-radius: 7px;
+        border: 1px solid rgba(255,255,255,0.14); background: rgba(6,10,16,0.6);
+        color: #eef2f7; font: 400 12px system-ui, sans-serif; outline: none;
+      }
+      #chat-input::placeholder { color: rgba(238,242,247,0.38); }
+      #chat-input:focus { border-color: rgba(255,200,110,0.5); background: rgba(6,10,16,0.85); }
+      #chat-send {
+        padding: 6px 12px; border-radius: 7px; cursor: pointer;
+        border: 1px solid rgba(255,255,255,0.18); background: rgba(40,50,66,0.75);
+        color: #f5ead8; font: 700 11px system-ui, sans-serif; letter-spacing: 0.05em;
+      }
+      #chat-send:hover { background: rgba(58,72,94,0.9); }
+
+      /* Needs / economy panel — sits above the controls hint, bottom left */
+      #needs {
+        position: fixed; left: 14px; bottom: 98px; z-index: 10; width: 210px;
+        color: #eef2f7; pointer-events: none;
+        background: rgba(14, 18, 26, 0.78); border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px; backdrop-filter: blur(8px);
+        box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+        opacity: 0; transition: opacity 0.3s ease;
+      }
+      #needs.show { opacity: 1; }
+      #needs .head {
+        display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+        padding: 8px 11px; border-bottom: 1px solid rgba(255,255,255,0.09);
+        font: 700 12px system-ui, sans-serif; letter-spacing: 0.09em;
+        text-transform: uppercase; color: #f5ead8;
+      }
+      #needs-money {
+        font: 700 13px ui-monospace, monospace; letter-spacing: 0.02em;
+        color: #8dffb0; text-transform: none;
+      }
+      #needs-list { padding: 7px 11px 9px; display: flex; flex-direction: column; gap: 5px; }
+      .need-row { display: grid; grid-template-columns: 62px 1fr 26px; align-items: center; gap: 7px; }
+      .need-name { font: 600 11px system-ui, sans-serif; opacity: 0.8; }
+      .need-track {
+        height: 7px; border-radius: 4px; background: rgba(255,255,255,0.1);
+        overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      }
+      .need-fill { display: block; height: 100%; border-radius: 4px; transition: width 0.25s ease, background 0.25s ease; }
+      .need-val { font: 700 11px ui-monospace, monospace; text-align: right; opacity: 0.85; }
+      .need-row.critical .need-name { opacity: 1; color: #ff9a90; }
+      .need-row.critical .need-val { opacity: 1; color: #ff9a90; }
+
+      /* ------------------------------------------------------------------
+         Opening cutscene: letterbox, fade, subtitles, skip.
+         `#cine` is inert (pointer-events: none) apart from the skip button, so
+         it can never trap input if something goes wrong mid-scene.
+         ------------------------------------------------------------------ */
+      #cine { position: fixed; inset: 0; z-index: 45; pointer-events: none;
+        opacity: 0; transition: opacity 0.4s ease; }
+      #cine.show { opacity: 1; }
+      #cine-fade {
+        position: absolute; inset: 0; background: #05070b;
+        opacity: 1; transition: opacity 0.55s ease;
+      }
+      .cine-bar {
+        position: absolute; left: 0; right: 0; height: 12vh; background: #000;
+        transform: scaleY(0); transition: transform 0.75s cubic-bezier(.4,0,.2,1);
+      }
+      #cine-bar-top { top: 0; transform-origin: top; }
+      #cine-bar-bottom { bottom: 0; transform-origin: bottom; }
+      .cine-bar.in { transform: scaleY(1); }
+
+      #cine-sub {
+        position: absolute; left: 50%; bottom: 17vh; transform: translateX(-50%) translateY(6px);
+        max-width: min(760px, 82vw); text-align: center;
+        opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+      #cine-sub.show { opacity: 1; transform: translateX(-50%); }
+      #cine-who {
+        display: block; font: 700 12px system-ui, sans-serif; letter-spacing: 0.18em;
+        text-transform: uppercase; color: #ffd23f; margin-bottom: 6px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+      }
+      #cine-text {
+        font: 400 clamp(16px, 2.2vw, 23px)/1.45 Georgia, "Times New Roman", serif;
+        color: #f5ead8; text-shadow: 0 2px 12px rgba(0,0,0,0.95);
+        white-space: pre-wrap;
+      }
+      /* Blinking caret while the line types itself out */
+      #cine-text::after {
+        content: '▍'; opacity: 0.75; margin-left: 1px;
+        animation: cine-caret 0.9s steps(1) infinite;
+      }
+      @keyframes cine-caret { 0%, 49% { opacity: 0.75; } 50%, 100% { opacity: 0; } }
+
+      #cine-skip {
+        position: absolute; right: 26px; bottom: calc(12vh + 22px);
+        pointer-events: auto; cursor: pointer;
+        padding: 8px 18px; border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.28); background: rgba(10,14,20,0.55);
+        color: #f5ead8; font: 700 12px system-ui, sans-serif; letter-spacing: 0.14em;
+        text-transform: uppercase; backdrop-filter: blur(4px);
+        transition: background 0.2s ease, border-color 0.2s ease;
+      }
+      #cine-skip:hover { background: rgba(30,38,52,0.85); border-color: rgba(255,255,255,0.5); }
+
+      /* While any cutscene is playing, clear the gameplay HUD out of frame. */
+      body.cine-on #needs,
+      body.cine-on #mission,
+      body.cine-on #social,
+      body.cine-on #hud,
+      body.cine-on #clock,
+      body.cine-on #minimap-wrap,
+      body.cine-on #needs-flash {
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transition: opacity 0.35s ease;
+      }
+
+      /* Mission tracker — under the leaderboard, top left */
+      #mission {
+        position: fixed; left: 14px; top: 258px; z-index: 10; width: 218px;
+        color: #eef2f7; pointer-events: none;
+        background: rgba(14, 18, 26, 0.78); border: 1px solid rgba(255,255,255,0.12);
+        border-left: 3px solid #ffd23f; border-radius: 12px;
+        backdrop-filter: blur(8px); box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+        opacity: 0; transform: translateX(-6px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+      #mission.show { opacity: 1; transform: none; }
+      #mission .head {
+        display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+        padding: 8px 11px 5px;
+        font: 700 12px system-ui, sans-serif; letter-spacing: 0.06em;
+        text-transform: uppercase; color: #ffd23f;
+      }
+      #mission-meta { font: 700 12px ui-monospace, monospace; color: #8dffb0; text-transform: none; }
+      #mission-objective {
+        padding: 0 11px 7px; font: 400 12px/1.4 system-ui, sans-serif;
+        color: #dfe6ef; opacity: 0.9;
+      }
+      #mission-bar {
+        margin: 0 11px 9px; height: 6px; border-radius: 4px;
+        background: rgba(255,255,255,0.1); overflow: hidden; position: relative;
+      }
+      #mission-fill { display: block; height: 100%; border-radius: 4px; background: #ffd23f;
+        transition: width 0.3s ease; }
+      #mission-progress {
+        position: absolute; right: 11px; top: 8px;
+        font: 700 11px ui-monospace, monospace; color: #f5ead8; opacity: 0.75;
+      }
+      #mission-progress.urgent { color: #ff7a6d; opacity: 1; }
+
+      /* Floating "+45 hunger  -$19" receipt after a purchase */
+      #needs-flash {
+        position: fixed; left: 50%; bottom: 132px; transform: translateX(-50%);
+        z-index: 21; pointer-events: none; white-space: nowrap;
+        padding: 7px 15px; border-radius: 999px;
+        background: rgba(14,18,26,0.8); border: 1px solid rgba(255,255,255,0.18);
+        font: 700 13px system-ui, sans-serif; color: #f5ead8;
+        opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+      #needs-flash.show { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+      #needs-flash .cost { color: #ff9a90; margin-left: 8px; }
+      #needs-flash .gain { color: #8dffb0; }
+
+      @media (max-height: 620px) { #chat-feed { height: 116px; } }
+      @media (max-width: 760px) {
+        #chat { width: 232px; }
+        #leaderboard { width: 176px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <div id="mm-backdrop"></div>
+    <div id="minimap-wrap">
+      <canvas id="minimap"></canvas>
+      <div id="mm-bar">
+        <span id="mm-info"></span>
+        <button id="mm-clear" type="button">Clear</button>
+        <button id="mm-close" type="button">✕ Close</button>
+      </div>
+    </div>
+
+    <div id="clock">15:00</div>
+
+    <div id="social">
+      <div id="leaderboard" class="panel">
+        <div class="head"><span>Leaderboard</span><span class="sub" id="lb-count"></span></div>
+        <div id="lb-list"></div>
+      </div>
+
+      <div id="chat" class="panel">
+        <div class="head"><span>City Chat</span><span class="sub">Enter to type</span></div>
+        <div id="chat-feed"></div>
+        <form id="chat-form" autocomplete="off">
+          <input id="chat-input" type="text" maxlength="140" placeholder="Say something…" />
+          <button id="chat-send" type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="cine">
+      <div id="cine-fade"></div>
+      <div id="cine-bar-top" class="cine-bar"></div>
+      <div id="cine-bar-bottom" class="cine-bar"></div>
+      <div id="cine-sub">
+        <span id="cine-who"></span><span id="cine-text"></span>
+      </div>
+      <button id="cine-skip" type="button">Skip ▸</button>
+    </div>
+
+    <div id="mission">
+      <div class="head"><span id="mission-title">No job</span><span id="mission-meta"></span></div>
+      <div id="mission-objective"></div>
+      <div id="mission-bar"><span id="mission-fill"></span></div>
+      <span id="mission-progress"></span>
+    </div>
+
+    <div id="needs">
+      <div class="head"><span>Condition</span><span id="needs-money">$0</span></div>
+      <div id="needs-list"></div>
+    </div>
+    <div id="needs-flash"></div>
+
+    <div id="hud">
+      <div><strong>Move</strong> WASD &nbsp;·&nbsp; <strong>Look</strong> Mouse (drag = precise) &nbsp;·&nbsp; <strong>Run</strong> Shift</div>
+      <div><strong>Jump</strong> Space &nbsp;·&nbsp; <strong>Crouch</strong> Ctrl / C &nbsp;·&nbsp; <strong>Chat</strong> Enter</div>
+      <div><strong>Hijack a car</strong> E &nbsp;·&nbsp; <strong>Drive</strong> WASD, Space = handbrake</div>
+      <div><strong>Zoom</strong> Scroll &nbsp;·&nbsp; <strong>Skip 6h</strong> N &nbsp;·&nbsp; <strong>Customize</strong> Esc</div>
+    </div>
+
+    <div id="panel">
+      <div class="title">Customize character</div>
+      <div class="row"><label>Outfit tint</label><input type="color" id="c-tint" value="#ffffff" /></div>
+      <div class="row"><label>Height</label><input type="range" id="c-height" min="0.7" max="1.6" step="0.01" value="1" /></div>
+      <div class="hint">A rigged human model with walk / run animation. Press Esc to adjust, then click the scene to resume.</div>
+    </div>
+
+    <div id="overlay">
+      <h1>Three.js City</h1>
+      <p>
+        Walk a customizable character through the city.<br />
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to move,
+        move the <kbd>Mouse</kbd> toward a screen edge to look around
+        (or drag for precision), <kbd>Shift</kbd> to run,
+        <kbd>Space</kbd> to jump, <kbd>Ctrl</kbd> to crouch,
+        <kbd>Scroll</kbd> to zoom, <kbd>N</kbd> to skip 6 hours.
+        <kbd>Enter</kbd> chats with the other players; <kbd>Esc</kbd> opens the customize panel.
+      </p>
+      <div class="cta">Click to start</div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

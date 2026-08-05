@@ -1,0 +1,18 @@
+{
+  "name": "threejs-city",
+  "version": "1.0.0",
+  "description": "A realistic-ish open-world 3D city prototype built with Three.js, explored in first person with WASD + mouse-look.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.5.5",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
