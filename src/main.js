@@ -1,4 +1,4 @@
-// Sushi Paws — entry point.
+// Catushi — entry point.
 //
 // This file owns three things and nothing else:
 //   1. the renderer / scene / sky / lighting / post stack,
@@ -29,6 +29,9 @@ import { createDelivery } from './game/delivery.js';
 import { createForaging } from './game/foraging.js';
 import { createQuests } from './game/questEngine.js';
 import { createNpcs } from './game/npcRuntime.js';
+import { createGuide } from './game/guide.js';
+import { createTutorial } from './game/tutorial.js';
+import { createGuideUI } from './ui/guideUI.js';
 import { createDialogueUI } from './ui/dialogueUI.js';
 import { createUI, createPanelManager } from './ui/index.js';
 import { createAudio } from './audio/audio.js';
@@ -37,6 +40,7 @@ import { makeToonGradient } from './engine/textures.js';
 import { isTypingInUI } from './engine/inputGuard.js';
 import * as KIT from './ui/kit.js';
 import { HOME, DISTRICTS } from './data/districts.js';
+import { SUPPLIERS, isOpenAt } from './data/suppliers.js';
 import { UPGRADES } from './data/upgrades.js';
 import { checkRecipeUnlocks } from './data/recipes.js';
 
@@ -308,7 +312,20 @@ game.setQuality = (n) => { state.settings.quality = n; applyQuality(n); save.sav
 // ===========================================================================
 let player = null;
 let clock = null, orders = null, restaurant = null, cooking = null, fishing = null,
-    delivery = null, foraging = null, quests = null, npcs = null, ui = null, dialogue = null;
+    delivery = null, foraging = null, quests = null, npcs = null, ui = null, dialogue = null,
+    guide = null, tutorial = null, guideUI = null;
+
+// Objects that must not appear in the outline's depth prepass (sprites, points
+// and anything else whose billboard quad would carve a hole in the depth
+// buffer). Systems register into this list; the frame loop hides them for the
+// prepass and puts them straight back.
+const depthHidden = [];
+function hideInDepthPass(obj) {
+  if (!obj || depthHidden.indexOf(obj) >= 0) return () => {};
+  depthHidden.push(obj);
+  return () => { const i = depthHidden.indexOf(obj); if (i >= 0) depthHidden.splice(i, 1); };
+}
+game.hideInDepthPass = hideInDepthPass;
 
 async function boot() {
   const cat = await catFromOptions({ url: CAT_MODEL_URL, ...PLAYER_CAT, gradientMap });
@@ -329,13 +346,34 @@ async function boot() {
   npcs = createNpcs(game, { gradientMap }); game.npcs = npcs;
   if (npcs && npcs.group && !npcs.group.parent) scene.add(npcs.group);
 
+  // Guidance layer: the brain, the day-one tutorial that feeds it, and the
+  // banner / arrows / markers / pin that show it. Built after quests + npcs
+  // (it reads both) and before the UI, so the HUD can sit around the banner.
+  guide = createGuide(game);          game.guide = guide;
+  tutorial = createTutorial(game, guide); game.tutorial = tutorial;
+  guideUI = createGuideUI(game, guide);   game.guideUI = guideUI;
+  if (guideUI && guideUI.fx) hideInDepthPass(guideUI.fx);
+
   ui = createUI(game);                game.ui2 = ui;
 
   // Content registration
   for (const s of DEFAULT_SPOTS) fishing.registerSpot(s);
   if (foraging.registerDefaults) foraging.registerDefaults();
   if (delivery.registerBoard) {
-    delivery.registerBoard({ id: 'job_board', x: HOME.plaza.x + 6, z: HOME.plaza.z - 2, label: 'Delivery board' });
+    delivery.registerBoard({ id: 'job_board', x: HOME.board.x, z: HOME.board.z, label: 'Delivery board' });
+  }
+  // Stalls: the supplier panel existed but nothing in the world opened it, so
+  // "press E at the stall" was a promise the city could not keep.
+  for (const s of SUPPLIERS) {
+    interactions.add({
+      id: `supplier:${s.id}`,
+      x: s.x, z: s.z, r: 3.0,
+      priority: 2,
+      key: 'E',
+      label: () => (isOpenAt(s, clock.hour) ? `Shop at ${s.name}` : `${s.name} — closed`),
+      data: { kind: 'supplier', supplierId: s.id, id: s.id },
+      onUse: () => { game.panels.open('supplier', { supplierId: s.id }); },
+    });
   }
 
   wireEvents();
@@ -353,7 +391,9 @@ async function boot() {
 // Cross-system wiring
 // ===========================================================================
 function wireEvents() {
-  bus.on(EV.TOAST, (p) => { if (p) KIT.toast(p.text, { icon: p.icon, tone: p.tone }); });
+  // EV.TOAST is owned by the UI layer (src/ui/index.js), which is constructed
+  // above and unsubscribes on destroy. Routing it here as well rendered every
+  // toast in the game twice.
   bus.on(EV.COINS, (p) => { if (p && p.delta > 0) audio.play('coin'); });
   bus.on(EV.XP, (p) => { if (p && p.leveledUp) audio.play('levelup'); });
   bus.on(EV.QUEST_DONE, () => audio.play('quest'));
@@ -446,9 +486,6 @@ function begin(loaded) {
     clock.set(1, 7);
     quests.offer('q01_first_order');
     quests.start('q01_first_order');
-    // Point the compass at the first stop so a new player is never lost.
-    const first = world.poi('yuki_stall') || world.poi('supplier_yuki_stall');
-    if (first) world.setWaypoint(first);
     KIT.toast('Master Kuro is waiting in the market', { icon: '🐈‍⬛', tone: 'good' });
   }
 
@@ -457,6 +494,14 @@ function begin(loaded) {
   bus.emit(EV.DAY_START, { day: state.clock.day });
   if (delivery && delivery.generateDaily) delivery.generateDaily();
   quests.refreshAvailability();
+
+  // The guide owns the waypoint from here on: it picks the single next thing
+  // and points the compass, the map, the banner and the arrows all at it.
+  if (tutorial) {
+    if (loaded) tutorial.syncFromState();
+    else if (state.settings.tutorial !== false) tutorial.restart();
+  }
+  if (guide) guide.refresh();
 }
 
 // ===========================================================================
@@ -488,6 +533,11 @@ function animate() {
       delivery.update(dt);
       foraging.update(dt);
       quests.update(dt);
+      // Tutorial first (it may advance a step), then the guide (which reads it),
+      // then the guide's visuals (which read the guide).
+      tutorial.update(dt);
+      guide.update(dt);
+      guideUI.update(dt);
       ui.update(dt);
       audio.update(dt);
 
@@ -510,12 +560,19 @@ function animate() {
   }
 
   if (usePost && composer) {
-    // Depth prepass for the ink outline.
+    // Depth prepass for the ink outline. Billboards are pulled out of it first:
+    // a sprite quad always faces the camera, so it would stamp a flat plate of
+    // depth into the buffer and the sobel would ring it in ink.
     const prev = renderer.getRenderTarget();
+    const restore = [];
+    for (const o of depthHidden) {
+      if (o && o.visible) { o.visible = false; restore.push(o); }
+    }
     renderer.setRenderTarget(depthTarget);
     renderer.clear();
     renderer.render(scene, camera);
     renderer.setRenderTarget(prev);
+    for (const o of restore) o.visible = true;
     composer.render();
   } else {
     renderer.render(scene, camera);
@@ -531,6 +588,9 @@ function logStats() {
 // Exposed for the headless smoke test in tools/smoke.mjs and for debugging.
 // Read-only in spirit — nothing in the game reads back off it.
 window.__sushi = game;
+
+// index.html ships a static placeholder; the real name lives in config.js.
+try { document.title = `${GAME.title} — ${GAME.tagline}`; } catch { /* non-DOM host */ }
 
 boot().then(() => {
   console.info(`%c${GAME.title} %c${GAME.tagline}`, 'font-weight:bold', 'color:#c8503f');

@@ -117,6 +117,32 @@ async function run() {
     probe.calls < 400 ? ok(`${probe.calls} draw calls`) : bad(`${probe.calls} draw calls (budget 400)`);
   }
 
+  step('Guidance');
+  const nav = await page.evaluate(() => {
+    const g = window.__sushi;
+    const cur = g.guide && g.guide.current;
+    const wp = g.world && g.world.waypoint;
+    return {
+      hasGuide: !!g.guide,
+      current: cur ? {
+        id: cur.id, title: cur.title, kind: cur.kind,
+        target: cur.target ? { x: +cur.target.x.toFixed(2), z: +cur.target.z.toFixed(2) } : null,
+      } : null,
+      waypoint: wp ? { x: +wp.x.toFixed(2), z: +wp.z.toFixed(2), label: wp.label } : null,
+      tutorial: g.tutorial ? { active: g.tutorial.active, step: g.tutorial.step && g.tutorial.step.id } : null,
+    };
+  });
+  console.log('   guide:', JSON.stringify(nav));
+  if (!nav.hasGuide) bad('game.guide is missing');
+  else if (!nav.current) bad('game.guide.current is null after New Game');
+  else if (!nav.current.target) bad(`guide objective "${nav.current.id}" has no target`);
+  else ok(`guide says "${nav.current.title}" (${nav.current.kind})`);
+  if (!nav.waypoint) bad('game.world.waypoint is null — the compass has nothing to point at');
+  else if (!nav.current || !nav.current.target) bad('cannot compare waypoint to a missing objective');
+  else if (Math.hypot(nav.waypoint.x - nav.current.target.x, nav.waypoint.z - nav.current.target.z) > 0.5) {
+    bad(`waypoint (${nav.waypoint.x}, ${nav.waypoint.z}) does not match the objective (${nav.current.target.x}, ${nav.current.target.z})`);
+  } else ok(`waypoint matches the objective (${nav.waypoint.label})`);
+
   step('Movement');
   const f0 = await page.evaluate(() => window.__sushi.frames || 0);
   await page.keyboard.down('KeyW');
@@ -131,7 +157,7 @@ async function run() {
   const dist = Math.hypot(moved.x - probe.pos.x, moved.z - probe.pos.z);
   // dt is clamped at 50 ms/frame, so on a software rasteriser the simulated
   // travel is bounded by frames * 0.05 * walkSpeed — normalise against that.
-  const budget = Math.max(1, (f1 - f0)) * 0.05 * 4.6;
+  const budget = Math.max(1, (f1 - f0)) * 0.05 * 5.0;   // CAT_CONTROLS.walk
   const frac = dist / budget;
   frac > 0.55
     ? ok(`cat walked ${dist.toFixed(1)} of a possible ${budget.toFixed(1)} units (${(f1 - f0)} frames)`)
@@ -263,7 +289,7 @@ async function run() {
 
   step('Corrupt save handling');
   const corrupt = await page.evaluate(() => {
-    localStorage.setItem('sushipaws.save.slot2', '{not json at all');
+    localStorage.setItem('catushi.save.slot2', '{not json at all');
     const r = window.__sushi.save.load('slot2');
     return { ok: r.ok, reason: r.reason, quarantined: Object.keys(localStorage).some((k) => k.includes('broken')) };
   });

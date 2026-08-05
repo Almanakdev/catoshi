@@ -1,4 +1,4 @@
-# Sushi Paws — runtime contracts
+# Catushi — runtime contracts
 
 Every gameplay system is a factory `createX(game, opts)` returning an object
 with (at minimum) `update(dt)`. `main.js` owns construction order and the frame
@@ -19,6 +19,10 @@ game = {
   player,                   // see below
   ui,                       // src/ui/kit.js namespace
   audio,                    // src/audio/audio.js
+  guide,                    // src/game/guide.js     — see below
+  tutorial,                 // src/game/tutorial.js  — day-one steps, feeds the guide
+  guideUI,                  // src/ui/guideUI.js     — banner + arrows + markers + pin
+  hideInDepthPass(obj),     // keep sprites/points out of the outline depth prepass
   panels,                   // { open(id), close(id), closeAll(), isOpen(id), register(id, api) }
   setMode(mode),            // 'explore' | 'panel' | 'cooking' | 'fishing' | 'dialogue' | 'cutscene'
   get mode(),
@@ -49,6 +53,18 @@ Emits `EV.TIME` every in-game minute, `EV.PHASE` on phase change,
   glowMats, neonMats,        // materials whose emissiveIntensity the day/night ramp drives
   update(dt, night) }
 ```
+
+### `game.guide`
+```js
+{ get current(),             // { id, title, hint, target:{x,z}|null, npcId, poiId, kind, distance }
+  update(dt), refresh(),     // recomputes; also drives world.setWaypoint()
+  setEnabled(v), on(cb),     // cb(next, prev) whenever the objective *changes*
+  resolve(spec),             // {kind:'npc'|'poi'|'district'|'counter'|'item'|…} -> {x,z}|null
+  destroy() }
+```
+The guide is the only thing that decides "what now?". Nothing else should own
+the waypoint while it is enabled. It never throws: an unresolvable objective
+falls through to the next priority level and warns once.
 
 ### `game.player`
 ```js

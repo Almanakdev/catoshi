@@ -4,7 +4,7 @@
 // the game; the levelled upgrades below are the steady drip.
 
 import { EV } from '../game/bus.js';
-import { injectStyles, el, panel, button, money } from './kit.js';
+import { injectStyles, el, panel, button, bar, money, THEME } from './kit.js';
 import {
   UPGRADE_CATEGORIES, UPGRADES, upgradeCost, upgradeUnlocked, upgradesByCategory,
 } from '../data/upgrades.js';
@@ -34,11 +34,25 @@ const CSS = `
   border:2px solid rgba(240,185,63,.55); border-radius:16px; padding:11px 13px;
   display:flex; gap:12px; align-items:flex-start;
 }
+.spu-hero.spu-ready{ border-color:var(--sp-green); background:linear-gradient(180deg,rgba(126,163,106,.24),rgba(126,163,106,.1)); }
 .spu-hero .spu-ico{ font-size:34px; line-height:1; }
 .spu-hero h3{ margin:0; font-size:15px; }
-.spu-ba{ display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; color:var(--sp-ink-soft); margin-top:4px; line-height:1.4; }
-.spu-ba .spu-arrow{ color:var(--sp-red); font-weight:900; }
-.spu-ba div{ flex:1; min-width:0; }
+
+/* before → after, side by side so the trade is one glance */
+.spu-ba{ display:flex; align-items:stretch; gap:9px; margin-top:7px; }
+.spu-ba .spu-arrow{ color:var(--sp-red); font-weight:900; font-size:16px; align-self:center; flex:0 0 auto; }
+.spu-side{
+  flex:1; min-width:0; border-radius:11px; padding:7px 9px;
+  background:rgba(255,255,255,.5); border:1.5px solid rgba(59,47,38,.1);
+}
+.spu-side.spu-after{ background:rgba(255,255,255,.85); border-color:rgba(240,185,63,.6); }
+.spu-side .spu-when{ font-size:9.5px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--sp-ink-soft); }
+.spu-side .spu-tname{ font-size:12.5px; font-weight:900; line-height:1.25; margin:1px 0 3px; }
+.spu-side .spu-gives{ font-size:11px; font-weight:700; color:var(--sp-ink-soft); line-height:1.4; }
+
+.spu-prog{ margin-top:8px; display:flex; flex-direction:column; gap:4px; }
+.spu-prog .spu-ptxt{ font-size:11px; font-weight:800; color:var(--sp-ink-soft); }
+.spu-prog .sp-bar{ height:8px; }
 
 .spu-grid{ display:grid; gap:9px; grid-template-columns:repeat(auto-fill, minmax(258px, 1fr)); }
 .spu-card{
@@ -73,33 +87,50 @@ function styleOnce() {
   document.head.appendChild(s);
 }
 
-/** Effect key -> readable label + how to format the per-level delta. */
+/**
+ * Effect key -> a phrase a player can act on. Nothing here shows a raw stat
+ * name: "sliceSpeed 0.07" means nothing, "7% more forgiving slicing" does.
+ *
+ * `unit` is appended straight after the number, `label` after a space.
+ */
 const EFFECT_LABEL = {
-  inventory:     { label: 'basket slots', pct: false },
-  stamina:       { label: 'max stamina',  pct: false },
-  timingZone:    { label: 'timing window', pct: true },
-  sliceSpeed:    { label: 'slice margin',  pct: true },
-  freshness:     { label: 'slower spoiling', pct: true },
-  tipChance:     { label: 'tip chance',   pct: true },
-  tipAmount:     { label: 'tip size',     pct: true },
-  queueSize:     { label: 'queue space',  pct: false },
-  cookSpeed:     { label: 'cook speed',   pct: true },
-  fishingLuck:   { label: 'fishing luck', pct: true },
-  deliveryTime:  { label: 's delivery grace', pct: false },
-  dailySpecials: { label: 'daily special', pct: false },
-  prepQuality:   { label: 'dish quality', pct: true },
-  buyDiscount:   { label: 'supplier discount', pct: true },
+  inventory:     { label: 'basket slots',            pct: false },
+  stamina:       { label: 'max stamina',             pct: false },
+  timingZone:    { label: 'wider timing window',     pct: true },
+  sliceSpeed:    { label: 'more forgiving slicing',  pct: true },
+  freshness:     { label: 'slower spoiling',         pct: true },
+  tipChance:     { label: 'more often tipped',       pct: true },
+  tipAmount:     { label: 'bigger tips',             pct: true },
+  queueSize:     { label: 'customer in the queue',   pct: false, plural: 'customers in the queue' },
+  cookSpeed:     { label: 'faster cooking',          pct: true },
+  fishingLuck:   { label: 'better fishing luck',     pct: true },
+  deliveryTime:  { label: 'more delivery time',      pct: false, unit: 's' },
+  dailySpecials: { label: 'daily special slot',      pct: false, plural: 'daily special slots' },
+  prepQuality:   { label: 'better dishes',           pct: true },
+  buyDiscount:   { label: 'off supplier prices',     pct: true },
 };
+
+/** "+2 basket slots", "+7% more forgiving slicing", "+8s more delivery time". */
+function effectPhrase(key, value) {
+  const def = EFFECT_LABEL[key];
+  if (!def) return `+${value} ${key}`;
+  if (def.pct) return `+${Math.round(value * 100)}% ${def.label}`;
+  const label = (value === 1 || !def.plural) ? def.label : def.plural;
+  return `+${value}${def.unit || ''} ${label}`;
+}
 
 function effectTags(effects) {
   const out = [];
-  for (const k in effects || {}) {
-    const def = EFFECT_LABEL[k] || { label: k, pct: false };
-    const v = effects[k];
-    const txt = def.pct ? `+${Math.round(v * 100)}% ${def.label}` : `+${v} ${def.label}`;
-    out.push(txt);
-  }
+  for (const k in effects || {}) out.push(effectPhrase(k, effects[k]));
   return out;
+}
+
+/** What the player already owns from this upgrade, in the same phrasing. */
+function ownedPhrase(u, lvl) {
+  if (!lvl) return '';
+  const bits = [];
+  for (const k in u.effects || {}) bits.push(effectPhrase(k, Math.round(u.effects[k] * lvl * 1000) / 1000));
+  return bits.join(' · ');
 }
 
 function requireText(req) {
@@ -161,8 +192,14 @@ export function createUpgradeUI(game) {
   }
 
   // --------------------------------------------------------- shop tier card
+  /** "4 seats · queue of 4" — what a tier actually hands the player. */
+  function tierGives(t) {
+    return `${t.seats} seats · queue of ${t.queue}`;
+  }
+
   function renderHero() {
     hero.textContent = '';
+    hero.classList.remove('spu-ready');
     const cur = SHOP_TIERS.find((t) => t.tier === state.shop.tier) || SHOP_TIERS[0];
     const next = SHOP_TIERS.find((t) => t.tier === state.shop.tier + 1) || null;
 
@@ -178,20 +215,50 @@ export function createUpgradeUI(game) {
       return;
     }
 
-    col.append(el('h3', null, `Upgrade the shop → ${next.name}`));
-    const ba = el('div', 'spu-ba');
-    ba.append(el('div', null, `Now: ${cur.name}. ${cur.seats} seats, queue of ${cur.queue}. ${cur.desc}`));
-    ba.append(el('span', 'spu-arrow', '→'));
-    ba.append(el('div', null, `After: ${next.name}. ${next.seats} seats, queue of ${next.queue}. ${next.desc}`));
-    col.append(ba);
-
-    const foot = el('div', 'spu-foot');
     const repOk = state.reputation >= next.repReq;
     const coinOk = state.canAfford(next.cost);
+    if (repOk && coinOk) hero.classList.add('spu-ready');
+
+    col.append(el('h3', null, `Upgrade the shop → ${next.name}`));
+
+    // before → after
+    const ba = el('div', 'spu-ba');
+    const before = el('div', 'spu-side');
+    before.append(el('div', 'spu-when', 'Now'));
+    before.append(el('div', 'spu-tname', cur.name));
+    before.append(el('div', 'spu-gives', tierGives(cur)));
+    before.append(el('div', 'spu-gives', cur.desc));
+    const after = el('div', 'spu-side spu-after');
+    after.append(el('div', 'spu-when', 'After'));
+    after.append(el('div', 'spu-tname', next.name));
+    after.append(el('div', 'spu-gives', tierGives(next)));
+    after.append(el('div', 'spu-gives', next.desc));
+    ba.append(before, el('span', 'spu-arrow', '→'), after);
+    col.append(ba);
+
+    // How close are they? Only worth drawing while it is still out of reach.
+    if (!coinOk || !repOk) {
+      const prog = el('div', 'spu-prog');
+      if (!coinOk) {
+        const frac = next.cost > 0 ? Math.max(0, Math.min(1, state.coins / next.cost)) : 1;
+        prog.append(el('div', 'spu-ptxt',
+          `${money(state.coins)} of ${money(next.cost)} saved — ${money(next.cost - state.coins)} to go`));
+        prog.append(bar(frac, THEME.gold));
+      }
+      if (!repOk) {
+        const frac = next.repReq > 0 ? Math.max(0, Math.min(1, state.reputation / next.repReq)) : 1;
+        prog.append(el('div', 'spu-ptxt',
+          `⭐ ${Math.round(state.reputation)} of ${next.repReq} reputation — serve more customers`));
+        prog.append(bar(frac, THEME.red));
+      }
+      col.append(prog);
+    }
+
+    const foot = el('div', 'spu-foot');
     foot.append(el('span', 'spu-cost', money(next.cost)));
-    foot.append(el('span', 'spu-req', repOk
-      ? `⭐ ${next.repReq} reputation — met`
-      : `⭐ needs ${next.repReq} reputation (you have ${Math.round(state.reputation)})`));
+    foot.append(el('span', 'spu-req', repOk && coinOk
+      ? 'You can afford this right now'
+      : (repOk ? 'Keep saving' : `Needs ⭐ ${next.repReq} reputation`)));
 
     const btn = button('Upgrade the shop', {
       cls: 'sp-primary',
@@ -236,7 +303,9 @@ export function createUpgradeUI(game) {
 
     const eff = el('div', 'spu-eff');
     for (const t of effectTags(u.effects)) eff.append(el('span', 'spu-tag', t));
+    c.append(el('div', 'spu-desc', maxed ? 'You have all of it:' : 'Each level gives:'));
     c.append(eff);
+    if (lvl > 0) c.append(el('div', 'spu-desc', `Already giving you ${ownedPhrase(u, lvl)}.`));
 
     const foot = el('div', 'spu-foot');
     if (maxed) {

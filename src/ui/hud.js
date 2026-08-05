@@ -9,12 +9,14 @@
 // quests, clock) it degrades to a blank slot rather than throwing.
 
 import { EV } from '../game/bus.js';
-import { injectStyles, el, bar, THEME } from './kit.js';
+import { injectStyles, el, bar, money, THEME } from './kit.js';
 import { RECIPES } from '../data/recipes.js';
 import { QUEST_INDEX, objectiveText } from '../data/quests.js';
 import { districtById } from '../data/districts.js';
 import { ingredientName } from '../data/ingredients.js';
 import { npc as npcById } from '../data/npcs.js';
+import { SHOP_TIERS } from '../data/progression.js';
+import { UPGRADES, upgradeCost, upgradeUnlocked } from '../data/upgrades.js';
 
 const STYLE_ID = 'sp-hud-style';
 
@@ -56,6 +58,33 @@ const CSS = `
 .sph-coins{ font-size:17px; color:var(--sp-red); }
 .sph-xpwrap{ margin-top:6px; }
 .sph-xpwrap .sp-bar{ height:7px; }
+
+/* Today's net — deliberately quiet, one line under the coins. */
+.sph-today{
+  margin:1px 0 0 23px; font-size:10.5px; font-weight:800; line-height:1.2;
+  color:var(--sp-ink-soft); font-variant-numeric:tabular-nums;
+}
+.sph-today.sph-up{ color:var(--sp-green); }
+.sph-today.sph-down{ color:var(--sp-red); }
+
+/* "You can afford an upgrade" nudge, pinned to the coin row. */
+.sph-nudge{
+  pointer-events:auto; cursor:pointer; font-family:inherit; font-weight:900;
+  font-size:10px; letter-spacing:.04em; line-height:1;
+  border:1.5px solid rgba(0,0,0,.12); border-radius:999px; padding:3px 8px;
+  background:linear-gradient(180deg,#94bd80,var(--sp-green)); color:#fff;
+  box-shadow:0 0 0 0 rgba(126,163,106,.7);
+  animation:sph-pulse 1.9s ease-out infinite;
+}
+.sph-nudge:hover{ filter:brightness(1.06); }
+.sph-nudge:focus-visible{ outline:2px solid var(--sp-red); outline-offset:2px; }
+.sph-nudge.sph-hide{ display:none; }
+@keyframes sph-pulse{
+  0%{ box-shadow:0 0 0 0 rgba(126,163,106,.65); }
+  70%{ box-shadow:0 0 0 9px rgba(126,163,106,0); }
+  100%{ box-shadow:0 0 0 0 rgba(126,163,106,0); }
+}
+@media (prefers-reduced-motion:reduce){ .sph-nudge{ animation:none; } }
 
 .sph-clock{ display:flex; align-items:center; gap:9px; padding:7px 14px; border-radius:999px; }
 .sph-clock .sph-time{ font-size:14px; letter-spacing:.04em; font-variant-numeric:tabular-nums; }
@@ -154,7 +183,16 @@ export function createHUD(game) {
   const tl = el('div', 'sph-card sph-tl');
   const coinRow = el('div', 'sph-line');
   const coinVal = el('span', 'sph-val sph-coins', '0');
-  coinRow.append(el('span', 'sph-ico', '🪙'), coinVal);
+  const nudge = el('button', 'sph-nudge sph-hide');
+  nudge.type = 'button';
+  nudge.textContent = 'UPGRADE';
+  nudge.addEventListener('click', () => {
+    try { game.panels.open('upgrades'); } catch { /* panel not built yet */ }
+  });
+  coinRow.append(el('span', 'sph-ico', '🪙'), coinVal, el('span', 'sph-grow'), nudge);
+
+  // Today's net, sitting quietly under the coin count.
+  const todayLine = el('div', 'sph-today', '');
 
   const repRow = el('div', 'sph-line');
   const repVal = el('span', 'sph-val', '0');
@@ -169,7 +207,7 @@ export function createHUD(game) {
   const xpWrap = el('div', 'sph-xpwrap');
   const xpBar = bar(0, THEME.gold);
   xpWrap.append(xpBar);
-  tl.append(coinRow, repRow, lvlRow, xpWrap);
+  tl.append(coinRow, todayLine, repRow, lvlRow, xpWrap);
 
   // ----------------------------------------------------------- top-centre
   const tc = el('div', 'sph-card sph-tc sph-clock');
@@ -225,11 +263,78 @@ export function createHUD(game) {
   let coinsTarget = state.coins;
   let visible = true;
   let panelsOpen = 0;
+  /** Which upgrade opportunity the badge is currently showing. */
+  let lastNudgeKey = null;
+  /** Opportunities already toasted this session — never toast the same twice. */
+  const announced = new Set();
   /** @type {{order:object,max:number,t:number,node:HTMLElement,ring:HTMLElement}[]} */
   let orders = [];
 
   // ------------------------------------------------------------- painters
   function paintCoins() { coinVal.textContent = `${Math.round(coinsShown)}¢`; }
+
+  /** "Today: +180" / "Today: -40" — quiet, but always there. */
+  function paintToday() {
+    const t = state.today || {};
+    const net = Math.round((Number(t.earned) || 0) - (Number(t.spent) || 0));
+    todayLine.textContent = `Today: ${net >= 0 ? '+' : '−'}${Math.abs(net)}¢`;
+    todayLine.classList.toggle('sph-up', net > 0);
+    todayLine.classList.toggle('sph-down', net < 0);
+    todayLine.title = `Earned ${Math.round(t.earned || 0)}¢, spent ${Math.round(t.spent || 0)}¢ today`;
+  }
+
+  // ------------------------------------------------------- upgrade nudge
+  /**
+   * The cheapest thing worth buying right now: the next shop tier if it is
+   * fully within reach, otherwise the cheapest affordable upgrade.
+   * @returns {{ key:string, label:string, toast:string }|null}
+   */
+  function affordableTarget() {
+    const next = SHOP_TIERS.find((t) => t.tier === state.shop.tier + 1) || null;
+    if (next && state.coins >= next.cost && state.reputation >= next.repReq) {
+      return {
+        key: `tier:${next.tier}`,
+        label: 'UPGRADE',
+        toast: `You can afford the ${next.name} — press U`,
+      };
+    }
+    let best = null;
+    for (const u of UPGRADES) {
+      const lvl = state.upgradeLevel(u.id);
+      if (lvl >= u.maxLevel) continue;
+      if (!upgradeUnlocked(u, state)) continue;
+      const cost = upgradeCost(u, lvl);
+      if (cost == null || cost > state.coins) continue;
+      if (!best || cost < best.cost) best = { u, cost, lvl };
+    }
+    if (!best) return null;
+    return {
+      key: `up:${best.u.id}:${best.lvl}`,
+      label: 'UPGRADE',
+      toast: `${money(best.cost)} buys ${best.u.name} — press U`,
+    };
+  }
+
+  function paintNudge() {
+    const target = affordableTarget();
+    if (!target) {
+      nudge.classList.add('sph-hide');
+      lastNudgeKey = null;
+      return;
+    }
+    nudge.classList.remove('sph-hide');
+    nudge.textContent = target.label;
+    nudge.title = target.toast;
+    nudge.setAttribute('aria-label', target.toast);
+
+    // Announce each distinct opportunity once, so it reads as news rather
+    // than nagging every time a coin lands.
+    if (target.key !== lastNudgeKey && !announced.has(target.key)) {
+      announced.add(target.key);
+      bus.emit(EV.TOAST, { text: target.toast, icon: '🏗️', tone: 'good' });
+    }
+    lastNudgeKey = target.key;
+  }
 
   function paintRep() {
     const tier = typeof state.repTier === 'function' ? state.repTier() : null;
@@ -485,15 +590,27 @@ export function createHUD(game) {
   }
 
   // ------------------------------------------------------------- wiring
-  on(EV.COINS, (p) => { coinsTarget = p && p.coins != null ? p.coins : state.coins; });
-  on(EV.REPUTATION, paintRep);
+  on(EV.COINS, (p) => {
+    coinsTarget = p && p.coins != null ? p.coins : state.coins;
+    paintToday();
+    paintNudge();
+  });
+  on(EV.REPUTATION, () => { paintRep(); paintNudge(); });
   on(EV.XP, paintXp);
   on(EV.STAMINA, paintStamina);
   on(EV.TIME, paintClock);
   on(EV.PHASE, paintClock);
-  on(EV.DAY_START, () => { paintClock(); orders.forEach((r) => r.node.remove()); orders = []; trimOrders(); });
+  on(EV.DAY_START, () => {
+    paintClock();
+    paintToday();
+    orders.forEach((r) => r.node.remove());
+    orders = [];
+    trimOrders();
+  });
   on(EV.DISTRICT_ENTER, (p) => paintDistrict(p && p.id));
-  on(EV.SHOP_UPGRADED, refreshOrderVisibility);
+  on(EV.SHOP_UPGRADED, () => { refreshOrderVisibility(); paintNudge(); });
+  // A fresh run or a loaded save changes every number at once.
+  on(EV.LOAD, () => { paintToday(); paintNudge(); });
 
   on(EV.QUEST_STARTED, paintQuest);
   on(EV.QUEST_PROGRESS, paintQuest);
@@ -507,10 +624,18 @@ export function createHUD(game) {
   on(EV.PANEL_OPEN, () => { panelsOpen++; applyVisibility(); });
   on(EV.PANEL_CLOSE, () => { panelsOpen = Math.max(0, panelsOpen - 1); applyVisibility(); });
 
-  // First paint.
+  // First paint. paintNudge() runs last and stays quiet on boot: a save that
+  // loads already able to afford something should not fire a toast at the
+  // title card, so seed `announced` with whatever is true at construction.
   paintCoins(); paintRep(); paintXp(); paintStamina(); paintClock(); paintQuest();
+  paintToday();
   paintDistrict((state.data && state.data.player && state.data.player.district) || null);
   refreshOrderVisibility();
+  {
+    const boot = affordableTarget();
+    if (boot) announced.add(boot.key);
+    paintNudge();
+  }
 
   // -------------------------------------------------------------- update
   let compassAcc = 0;
@@ -551,7 +676,10 @@ export function createHUD(game) {
     setVisible,
     get visible() { return visible; },
     update,
-    refresh() { paintRep(); paintXp(); paintStamina(); paintClock(); paintQuest(); },
+    refresh() {
+      paintRep(); paintXp(); paintStamina(); paintClock(); paintQuest();
+      paintToday(); paintNudge();
+    },
     destroy,
   };
 }

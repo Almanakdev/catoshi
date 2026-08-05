@@ -1,4 +1,4 @@
-# Project: Sushi Paws
+# Project: Catushi
 
 A cozy semi-open-world Three.js game: a cat becomes a sushi master in a
 Japanese-inspired city. Built on the `ENGINE CITY` base.

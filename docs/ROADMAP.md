@@ -1,6 +1,6 @@
-# Sushi Paws — implementation roadmap
+# Catushi — implementation roadmap
 
-Working title. Everything is namespaced `sushipaws.*` (save keys) and `sp-`
+Working title. Everything is namespaced `catushi.*` (save keys) and `sp-`
 (CSS), and the display name lives in one place (`src/config.js` → `GAME.title`),
 so renaming the project is a one-line change plus a save-key migration.
 
@@ -30,14 +30,14 @@ You chose compact readable districts over the engine's procedural grid, so
 `city.js` was retired to `_attic/` and `src/world/world.js` places every building
 by hand against a validator that rejects overlaps with other buildings, roads,
 water and the plaza. The engine's *building contract* (merge geometry → one
-`InstancedMesh` per channel) is reused exactly, which is why 116 buildings and
-696 props still render in ~150 draw calls.
+`InstancedMesh` per channel) is reused exactly, which is why 60 buildings and
+323 props still render in 146 draw calls.
 
 **5. One interaction registry, one prompt.**
 Everything you can press E on registers with `src/game/interactions.js`, which
 resolves priority and proximity and owns the prompt. The engine's hardcoded
 door/service/board/car chain in `main.js` does not scale past a handful of verbs;
-this handles 38 at boot without a single conditional in `main.js`.
+this handles 44 at boot without a single conditional in `main.js`.
 
 **6. The follow controller was parameterised, not forked.**
 Its constants were tuned for a 4-unit humanoid. They are now an injectable
@@ -68,7 +68,7 @@ frame identically; the cat gets its own numbers from `src/config.js`.
   interaction that calls `progress('minigame', 'lost_crate')`.
 - **Hiring Hana** grants the flag but there is no staff simulation behind it.
 - **Interiors.** The engine's interior system is vendored and working but no
-  Sushi Paws room is built yet — the shop is exterior-only, which suits a street
+  Catushi room is built yet — the shop is exterior-only, which suits a street
   cart and a market stall but tier 4–5 want an inside.
 - **Weather** is vendored but not wired into the frame loop.
 - **Controller support.**

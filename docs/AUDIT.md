@@ -1,7 +1,7 @@
 # Phase 1 — Audit of `ENGINE CITY`
 
 Audited 2026‑08‑05 against `~/Documents/ROXX/2. MOCKUP/ENGINE CITY`.
-Nothing in that folder was modified. Sushi Paws is a clone.
+Nothing in that folder was modified. Catushi is a clone.
 
 ## 1. Technology stack — verified, not assumed
 
@@ -29,13 +29,13 @@ Project size: 393 MB total — 130 MB `public/`, 131 MB `dist/`, 68 MB `node_mod
 | NPCs | ⚠️ | `crowd.js` (live), `npcs.js` (dead code) | **Replace** — VRM crowd is a stateless random walk. No dialogue, no schedules, no interaction hooks at all |
 | Interactions | ⚠️ | `main.js` `checkDoors()` + a hardcoded E-key priority chain | **Rebuild** — worked, but not extensible. Became `game/interactions.js` |
 | Vehicles | ✅ | `traffic.js` (703 L), `driving.js` | **Not used** — a cat delivering sushi does not drive. Kept in `_attic/` |
-| Buildings | ✅ | `shops/` (20 types), `landmarks/`, `industrial/` | **Reuse the contract, replace the content** — the merge-then-instance builder pattern is excellent and Sushi Paws follows it exactly |
+| Buildings | ✅ | `shops/` (20 types), `landmarks/`, `industrial/` | **Reuse the contract, replace the content** — the merge-then-instance builder pattern is excellent and Catushi follows it exactly |
 | UI | ⚠️ | static markup in `index.html` + `getElementById` | **Rebuild** — dark glass HUD, wrong art direction, no reusable panel component |
 | Save system | ❌ | — | **Missing.** Grep for `localStorage` / `JSON.stringify` across `src/`: **zero matches**. Every reload was a fresh run |
 | Quest system | ⚠️ | `missions.js` (563 L) | **Replace** — three hardcoded mission kinds, one at a time, no ids, no chain, no persistence. Objectives are only ever "be at a place" |
 | Inventory | ❌ | — | **Missing.** No item concept anywhere |
 | Economy | ⚠️ | `needs.js` — one `money` variable + a 12-entry `SERVICES` table | **Extend** — buying is "pay coins, gain a stat". No stock, no catalogue, nothing you own afterwards |
-| Day/night cycle | ✅ | `main.js` lines 473–590 | **Reuse the idea, rebuild the code** — it was module-private with no API. Sushi Paws has `game/clock.js` |
+| Day/night cycle | ✅ | `main.js` lines 473–590 | **Reuse the idea, rebuild the code** — it was module-private with no API. Catushi has `game/clock.js` |
 | Weather | ✅ | `weather.js` | **Reuse as-is** — clean, self-restoring, cheap when clear |
 | Post-processing | ✅ | `main.js` — outline / GTAO / bloom / godrays / grade | **Partially reuse** — the depth+normal outline needs a second full scene render. Replaced with a cheaper depth-only sobel |
 | Textures | ✅ | `textures.js` (869 L) | **Reuse wholesale** — 20 canvas texture generators and the toon gradient ramp |
@@ -51,7 +51,7 @@ Project size: 393 MB total — 130 MB `public/`, 131 MB `dist/`, 68 MB `node_mod
 - Four separate modules re-derive the road grid from `blocks/blockSize/road` rather than sharing one graph.
 - The outline pass re-renders the whole scene with an override material, so every transparent effect must be hidden during it.
 
-## 3. What Sushi Paws reuses, changes, and adds
+## 3. What Catushi reuses, changes, and adds
 
 **Reused unchanged** (`src/engine/`): `textures.js`, `prim.js`, `inputGuard.js`, `weather.js`, `skyDetails.js`, `cinematic.js`, `entranceMarkers.js`, `minimap.js`, `interiors.js`.
 
@@ -65,4 +65,4 @@ Project size: 393 MB total — 130 MB `public/`, 131 MB `dist/`, 68 MB `node_mod
 
 ## 4. Backup / restore point
 
-The clone was made without `.git`, `dist/` or `node_modules/`, then re-initialised as its own repository with the engine baseline committed first and tagged, so `git diff engine-baseline` shows exactly what Sushi Paws changed. `ENGINE CITY` itself was never opened for writing.
+The clone was made without `.git`, `dist/` or `node_modules/`, then re-initialised as its own repository with the engine baseline committed first and tagged, so `git diff engine-baseline` shows exactly what Catushi changed. `ENGINE CITY` itself was never opened for writing.

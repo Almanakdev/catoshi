@@ -39,23 +39,23 @@ export function seasonForDay(day) {
  */
 export const DEFAULT_NODES = [
   // --- Old Market: shiso growing out of the alley walls --------------------
-  { id: 'forage_shiso_alley_a', name: 'Shiso patch',  x: -84, z: -6,  ingredientId: 'shiso', respawnHours: 8,  qtyRange: [1, 2], look: 'leaf' },
-  { id: 'forage_shiso_alley_b', name: 'Shiso patch',  x: -66, z: 20,  ingredientId: 'shiso', respawnHours: 10, qtyRange: [1, 2], look: 'leaf' },
-  { id: 'forage_shiso_alley_c', name: 'Shiso patch',  x: -100, z: -22, ingredientId: 'shiso', respawnHours: 12, qtyRange: [1, 3], look: 'leaf' },
+  { id: 'forage_shiso_alley_a', name: 'Shiso patch',  x: -40, z: -1.7,  ingredientId: 'shiso', respawnHours: 8,  qtyRange: [1, 2], look: 'leaf' },
+  { id: 'forage_shiso_alley_b', name: 'Shiso patch',  x: -31, z: 13,  ingredientId: 'shiso', respawnHours: 10, qtyRange: [1, 2], look: 'leaf' },
+  { id: 'forage_shiso_alley_c', name: 'Shiso patch',  x: -48, z: -10.7, ingredientId: 'shiso', respawnHours: 12, qtyRange: [1, 3], look: 'leaf' },
 
   // --- Residential: petals under the cherry trees, spring only -------------
-  { id: 'forage_sakura_a', name: 'Fallen petals', x: -6,  z: 116, ingredientId: 'sakura', respawnHours: 14, qtyRange: [1, 2], season: 'spring', look: 'petal' },
-  { id: 'forage_sakura_b', name: 'Fallen petals', x: 18,  z: 96,  ingredientId: 'sakura', respawnHours: 14, qtyRange: [1, 2], season: 'spring', look: 'petal' },
-  { id: 'forage_sakura_c', name: 'Fallen petals', x: 34,  z: 122, ingredientId: 'sakura', respawnHours: 18, qtyRange: [1, 3], season: 'spring', look: 'petal' },
+  { id: 'forage_sakura_a', name: 'Fallen petals', x: -6.4, z: 57.4, ingredientId: 'sakura', respawnHours: 14, qtyRange: [1, 2], season: 'spring', look: 'petal' },
+  { id: 'forage_sakura_b', name: 'Fallen petals', x: 6.4, z: 48.4,  ingredientId: 'sakura', respawnHours: 14, qtyRange: [1, 2], season: 'spring', look: 'petal' },
+  { id: 'forage_sakura_c', name: 'Fallen petals', x: 15, z: 60.1, ingredientId: 'sakura', respawnHours: 18, qtyRange: [1, 3], season: 'spring', look: 'petal' },
 
   // --- Old Market: yuzu tree behind the tea house --------------------------
-  { id: 'forage_yuzu_a', name: 'Yuzu tree', x: -88, z: -14, ingredientId: 'yuzu', respawnHours: 20, qtyRange: [1, 2], look: 'fruit' },
-  { id: 'forage_yuzu_b', name: 'Yuzu tree', x: -96, z: -8,  ingredientId: 'yuzu', respawnHours: 24, qtyRange: [1, 1], look: 'fruit' },
+  { id: 'forage_yuzu_a', name: 'Yuzu tree', x: -42, z: -6.2, ingredientId: 'yuzu', respawnHours: 20, qtyRange: [1, 2], look: 'fruit' },
+  { id: 'forage_yuzu_b', name: 'Yuzu tree', x: -46, z: -2.8,  ingredientId: 'yuzu', respawnHours: 24, qtyRange: [1, 1], look: 'fruit' },
 
   // --- Old Market: herb bed by the shrine at the west end ------------------
-  { id: 'forage_herbs_shrine_a', name: 'Herb bed', x: -104, z: 12, ingredientId: 'shiso',  respawnHours: 9,  qtyRange: [1, 2], look: 'herb' },
-  { id: 'forage_herbs_shrine_b', name: 'Shrine ginger', x: -110, z: 4, ingredientId: 'ginger', respawnHours: 7, qtyRange: [1, 3], look: 'herb' },
-  { id: 'forage_herbs_shrine_c', name: 'Wild sesame', x: -98, z: 18, ingredientId: 'sesame', respawnHours: 6, qtyRange: [2, 3], look: 'herb' },
+  { id: 'forage_herbs_shrine_a', name: 'Herb bed', x: -50, z: 8.5, ingredientId: 'shiso',  respawnHours: 9,  qtyRange: [1, 2], look: 'herb' },
+  { id: 'forage_herbs_shrine_b', name: 'Shrine ginger', x: -53, z: 4, ingredientId: 'ginger', respawnHours: 7, qtyRange: [1, 3], look: 'herb' },
+  { id: 'forage_herbs_shrine_c', name: 'Wild sesame', x: -47, z: 11.9, ingredientId: 'sesame', respawnHours: 6, qtyRange: [2, 3], look: 'herb' },
 ];
 
 // ---------------------------------------------------------------------------

@@ -157,12 +157,16 @@ export function createSettingsUI(game) {
     return row;
   }
 
-  function checkbox(label, key) {
+  function checkbox(label, key, onChange) {
     const wrap = el('label', 'spg-check');
     const input = el('input');
     input.type = 'checkbox';
     input.checked = !!S()[key];
-    input.addEventListener('change', () => { S()[key] = input.checked; persist(); });
+    input.addEventListener('change', () => {
+      S()[key] = input.checked;
+      persist();
+      if (onChange) onChange(input.checked);
+    });
     wrap.append(input, el('span', null, label));
     wrap.sync = () => { input.checked = !!S()[key]; };
     return wrap;
@@ -190,7 +194,17 @@ export function createSettingsUI(game) {
   body.append(el('div', 'spg-h', 'Controls'));
   const cInvert = checkbox('Invert vertical look', 'invertY');
   const cHints = checkbox('Show hints and tooltips', 'showHints');
-  body.append(cInvert, cHints);
+  // Ticking this replays the day-one tutorial from step one; unticking it stops
+  // it wherever it is. Either way the guidance banner keeps working.
+  const cTutorial = checkbox('Play the tutorial', 'tutorial', () => {
+    const t = game.tutorial;
+    if (!t) return;
+    try {
+      if (S().tutorial) t.restart();
+      else if (typeof t.syncFromState === 'function') t.syncFromState();
+    } catch (err) { console.error('[settings] tutorial toggle threw', err); }
+  });
+  body.append(cInvert, cHints, cTutorial);
 
   body.append(el('div', 'spg-h', 'Saved games'));
   const slotWrap = el('div', 'sp-col');
@@ -294,6 +308,7 @@ export function createSettingsUI(game) {
     segQuality.sync();
     cInvert.sync();
     cHints.sync();
+    cTutorial.sync();
   }
 
   offs.push(game.bus.on(EV.SAVE, () => { if (open) renderSlots(); }));

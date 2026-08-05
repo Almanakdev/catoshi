@@ -4,11 +4,13 @@
 // authored daily schedule, and hangs the whole social layer (name labels, quest
 // markers, the "press E to talk" interaction and the dialogue flow) off that.
 //
-// Budget: the cast is small (under twenty cats) but the poses are not free, so
-// there are three distance bands measured from the camera —
-//   < FULL_DIST (70)  full skeletal update, labels, markers
-//   < HIDE_DIST (120) logical position only; the mesh is still drawn, frozen
-//   >= HIDE_DIST      hidden entirely
+// Budget: seventeen cats at the player's 25-mesh rig would be ~425 draw calls,
+// more than the entire city, so the cast is built at `lod: 'npc'` (7 meshes)
+// and the catModel's own distance bands do the rest. This file feeds it a
+// camera distance and a frustum test every frame; catModel decides whether to
+// animate at full rate, at 10 Hz, or not at all. The bands come from
+// QUALITY[].npcDistance so the graphics setting actually moves them.
+//
 // Nothing is created or destroyed while the game runs: the cats, the labels and
 // the markers are all pooled from construction, and the label canvases are
 // built lazily the first time a cat comes close enough to read.
@@ -21,9 +23,18 @@ import {
   scheduledSpot, dialogueTier, lineFor,
 } from '../data/npcs.js';
 import { createDialogueUI } from '../ui/dialogueUI.js';
+import { QUALITY } from '../config.js';
 
-const FULL_DIST = 70;
-const HIDE_DIST = 120;
+// QUALITY[].npcDistance is 45 / 70 / 95. `far` is where a cat stops being drawn
+// and `near` where it drops to the 10 Hz update; at the default (medium) tier
+// that lands on ~45 and ~20 units, and both scale with the graphics setting.
+const LOD_FAR_OF_QUALITY = 0.64;
+const LOD_NEAR_OF_FAR = 0.45;
+// Padding on the frustum test. A cat just off the edge of the screen can still
+// throw a shadow into it, so the sphere is generous — this is about skipping
+// the pose solver, not about shaving the last few culls.
+const FRUSTUM_R = 3.0;
+
 const LABEL_DIST = 18;
 const MARKER_DIST = 42;
 
@@ -32,6 +43,7 @@ const ARRIVE_R = 0.9;
 const TURN_RATE = 6.0;
 
 const MARKER_REFRESH = 0.5;   // seconds between quest-marker re-evaluations
+const OCCLUSION_REFRESH = 0.2; // seconds between name-label line-of-sight tests
 
 /** schedule `what` -> a catModel action for when the NPC has arrived. */
 const IDLE_ACTION = {
@@ -114,6 +126,9 @@ export function createNpcs(game, { gradientMap = null } = {}) {
   let disposed = false;
   let markerClock = 0;
   let ownDialogue = null;
+  // The guidance layer (src/ui/guideUI.js) draws a richer, capped marker set of
+  // its own. When it is present it switches these off so no head wears two.
+  let markersOn = true;
 
   const markerTex = {
     '!': markerTexture(T, '!', '#c8503f'),
@@ -122,6 +137,59 @@ export function createNpcs(game, { gradientMap = null } = {}) {
 
   const camPos = new T.Vector3();
   const rngOf = (i) => ((Math.sin(i * 127.1 + 311.7) * 43758.5453) % 1 + 1) % 1;
+
+  // ---- level of detail ----------------------------------------------------
+  const _frustum = new T.Frustum();
+  const _projView = new T.Matrix4();
+  const _sphere = new T.Sphere(new T.Vector3(), FRUSTUM_R);
+  let lodQuality = -1;   // last quality tier pushed into the cats
+
+  /** Re-derive the distance bands from the graphics setting, when it changes. */
+  function syncLod() {
+    let q = 1;
+    try { q = Number(state && state.settings && state.settings.quality); } catch { /* default */ }
+    if (!Number.isFinite(q)) q = 1;
+    q = Math.max(0, Math.min(QUALITY.length - 1, q | 0));
+    if (q === lodQuality) return;
+    lodQuality = q;
+    const far = (QUALITY[q].npcDistance || 70) * LOD_FAR_OF_QUALITY;
+    const near = far * LOD_NEAR_OF_FAR;
+    for (const rec of records) {
+      try { rec.cat.setLodDistance(near, far); } catch (err) { console.error('[npcs] setLodDistance', err); }
+    }
+  }
+
+  // Line-of-sight scratch for the name labels.
+  const _ray = new T.Ray();
+  const _labelPt = new T.Vector3();
+  const _hit = new T.Vector3();
+  let occlusionClock = 0;
+
+  /**
+   * Is a wall between the camera and this cat's name label?
+   *
+   * A label is a sprite, so it depth-tests against the world and a building in
+   * front of it slices the pill in half — which reads as a rendering fault
+   * rather than as "they are behind that wall". Cheap enough to run on the
+   * handful of cats close enough to be labelled, five times a second.
+   */
+  function labelOccluded(rec, headY) {
+    const cols = game && game.world && game.world.colliders;
+    if (!cols || !cols.length) return false;
+    _labelPt.set(rec.pos.x, headY, rec.pos.z);
+    _labelPt.sub(camPos);
+    const len = _labelPt.length();
+    if (len < 0.5) return false;
+    _labelPt.multiplyScalar(1 / len);
+    _ray.set(camPos, _labelPt);
+    for (let i = 0; i < cols.length; i++) {
+      const box = cols[i];
+      if (!box || box.containsPoint(camPos)) continue;   // standing inside it: ignore
+      if (!_ray.intersectBox(box, _hit)) continue;
+      if (_hit.distanceTo(camPos) < len - 0.6) return true;
+    }
+    return false;
+  }
 
   // --------------------------------------------------------------- helpers
   function hour() {
@@ -175,6 +243,7 @@ export function createNpcs(game, { gradientMap = null } = {}) {
         fur: def.fur, accent: def.accent, hat: def.hat,
         scale: Number(def.size) || 1,
         gradientMap,
+        lod: 'npc',
       });
     } catch (err) {
       console.error(`[npcs] createCat failed for "${def.id}"`, err);
@@ -202,6 +271,7 @@ export function createNpcs(game, { gradientMap = null } = {}) {
       markerKind: null,
       spotT: 0,
       talking: false,
+      labelBlocked: false,   // wall between the camera and the name label
       bob: rngOf(i + 3) * Math.PI * 2,
     };
 
@@ -378,7 +448,7 @@ export function createNpcs(game, { gradientMap = null } = {}) {
     const q = quests();
     for (const rec of records) {
       let kind = null;
-      if (q && typeof q.markerFor === 'function') {
+      if (markersOn && q && typeof q.markerFor === 'function') {
         try { kind = q.markerFor(rec.id); } catch { kind = null; }
       }
       if (kind !== rec.markerKind) {
@@ -466,39 +536,60 @@ export function createNpcs(game, { gradientMap = null } = {}) {
     markerClock -= d;
     if (markerClock <= 0) { markerClock = MARKER_REFRESH; refreshMarkers(); }
 
-    if (game && game.camera) game.camera.getWorldPosition(camPos);
+    occlusionClock -= d;
+    const occlusionDue = occlusionClock <= 0;
+    if (occlusionDue) occlusionClock = OCCLUSION_REFRESH;
+
+    syncLod();
+
+    const cam = game && game.camera;
+    if (cam) {
+      cam.getWorldPosition(camPos);
+      cam.updateMatrixWorld();
+      _projView.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+      _frustum.setFromProjectionMatrix(_projView);
+    }
 
     for (const rec of records) {
       try {
+        // Everyone keeps walking their schedule regardless of the LOD band —
+        // only the drawing and the pose solver are throttled, so nobody is
+        // standing in the wrong place when you turn around.
         step(rec, d);
 
         const dx = rec.pos.x - camPos.x, dz = rec.pos.z - camPos.z;
         const dist = Math.hypot(dx, dz);
 
-        if (dist >= HIDE_DIST) {
-          if (rec.cat.group.visible) rec.cat.group.visible = false;
-          continue;                       // logical position only
-        }
-        if (!rec.cat.group.visible) rec.cat.group.visible = true;
-
         rec.cat.group.position.copy(rec.pos);
         rec.cat.group.rotation.y = rec.yaw;
 
-        if (dist >= FULL_DIST) {
-          // Mid band: placed and drawn, but the pose solver is skipped.
+        // catModel owns the bands: it hides itself past `far` or off-screen,
+        // runs at 10 Hz in the middle, and animates normally up close.
+        _sphere.center.set(rec.pos.x, rec.pos.y + 1.0, rec.pos.z);
+        const inFrustum = cam ? _frustum.intersectsSphere(_sphere) : true;
+        rec.cat.update(d, rec.speed, { distance: dist, inFrustum });
+
+        if (!rec.cat.group.visible) {
           if (rec.label && rec.label.sprite) rec.label.sprite.visible = false;
           if (rec.marker && rec.marker.sprite) rec.marker.sprite.visible = false;
+          if (rec.spotT > 0) rec.spotT = Math.max(0, rec.spotT - d);
           continue;
         }
 
-        rec.cat.update(d, rec.speed);
-
-        // ---- name label, fading in over the last few metres
+        // ---- name label: fades in over the last few metres, shrinks with
+        //      distance, and disappears completely behind a wall rather than
+        //      being sliced in half by one.
         if (dist < LABEL_DIST) {
           const lab = ensureLabel(rec);
           if (lab.sprite) {
+            const scl = Number(rec.def.size) || 1;
+            const headY = rec.pos.y + 1.62 * scl + 0.18;
+            if (occlusionDue) rec.labelBlocked = labelOccluded(rec, headY);
             const t = Math.max(0, Math.min(1, (LABEL_DIST - dist) / 6));
-            lab.mat.opacity = t * (rec.spotT > 0 ? 1 : 0.92);
+            lab.mat.opacity = rec.labelBlocked ? 0 : t * (rec.spotT > 0 ? 1 : 0.92);
+            // Far labels read as small ambience, near ones as a real name tag.
+            const s = 0.74 + t * 0.26;
+            lab.sprite.scale.set(2.0 * s, 0.5 * s, 1);
             lab.sprite.visible = lab.mat.opacity > 0.02;
           }
         } else if (rec.label && rec.label.sprite) {
@@ -508,7 +599,7 @@ export function createNpcs(game, { gradientMap = null } = {}) {
         // ---- quest marker
         const m = rec.marker;
         if (m && m.sprite) {
-          if (rec.markerKind && dist < MARKER_DIST) {
+          if (markersOn && rec.markerKind && dist < MARKER_DIST) {
             rec.bob += d * 2.4;
             const scl = (Number(rec.def.size) || 1);
             const pulse = rec.spotT > 0 ? 1.35 + Math.sin(rec.bob * 3) * 0.15 : 1;
@@ -617,6 +708,14 @@ export function createNpcs(game, { gradientMap = null } = {}) {
     talk,
     get npcs() { return records.slice(); },
     find, positionOf, spotlight,
+    /** Turn the built-in ! / ? head sprites on or off. */
+    setMarkersEnabled(v) {
+      markersOn = !!v;
+      markerClock = 0;
+      refreshMarkers();
+      return markersOn;
+    },
+    get markersEnabled() { return markersOn; },
     inDistrict: (districtId) => npcsInDistrict(districtId)
       .map((n) => byId[n.id])
       .filter(Boolean),

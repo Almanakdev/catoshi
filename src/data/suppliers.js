@@ -22,7 +22,7 @@ export const SUPPLIERS = [
     district: 'old_market',
     icon: '🍚',
     color: '#e8dcc0',
-    x: -58, z: 14, yaw: Math.PI,
+    x: -27, z: 9.7, yaw: Math.PI,
     blurb: 'A tidy stall of rice sacks and washed vegetables, everything sorted by size.',
     stock: [
       { id: 'rice',     price: 6,  daily: 12, restock: 12 },
@@ -52,7 +52,7 @@ export const SUPPLIERS = [
     district: 'old_market',
     icon: '🧺',
     color: '#c8a24a',
-    x: -46, z: -6, yaw: -Math.PI / 2,
+    x: -21, z: -1.7, yaw: -Math.PI / 2,
     blurb: 'Dry goods, sauces and stacked nori tins, with a price board that never changes.',
     stock: [
       { id: 'nori',      price: 5,  daily: 12, restock: 12 },
@@ -81,7 +81,7 @@ export const SUPPLIERS = [
     district: 'fish_harbor',
     icon: '🐟',
     color: '#f08a63',
-    x: -16, z: -120, yaw: 0,
+    x: -2.4, z: -50, yaw: 0,
     blurb: 'A plank table on the quay, iced boxes, and whatever came off the boat at dawn.',
     stock: [
       { id: 'salmon',    price: 16, daily: 8, restock: 8 },
@@ -107,7 +107,7 @@ export const SUPPLIERS = [
     district: 'fish_harbor',
     icon: '⚓',
     color: '#4e8fa8',
-    x: 18, z: -126, yaw: Math.PI / 2,
+    x: 16.3, z: -53, yaw: Math.PI / 2,
     blurb: 'Concrete, meltwater and a bell. The grading here is brutal and the fish is the best in the city.',
     stock: [
       { id: 'tuna',      price: 22, daily: 6, restock: 6 },
@@ -135,7 +135,7 @@ export const SUPPLIERS = [
     icon: '🏪',
     color: '#3f7fa8',
     // Never closes — the emergency option when a stall shut before you got there.
-    x: 60, z: 10, yaw: Math.PI,
+    x: 26, z: 4, yaw: Math.PI,
     blurb: 'Everything, any hour, at a price that quietly punishes bad planning.',
     stock: [
       { id: 'rice',      price: 8,  daily: 10, restock: 10 },
@@ -172,7 +172,7 @@ export const SUPPLIERS = [
     district: 'neon_street',
     icon: '✨',
     color: '#e0508f',
-    x: 112, z: -92, yaw: Math.PI,
+    x: 52, z: -34.3, yaw: Math.PI,
     // Night trader: openHour > closeHour means the window wraps past midnight.
     blurb: 'Folding tables under paper lanterns, selling things no daylight shop will carry.',
     stock: [

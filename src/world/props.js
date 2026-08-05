@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { paint, box, cyl, blob, merge, C } from '../engine/prim.js';
 
 // ---------------------------------------------------------------------------
-// SUSHI PAWS — street prop library.
+// CATUSHI — street prop library.
 //
 // Every prop is a tiny merged prefab that follows the SAME contract as the shop
 // builders: a builder takes no required arguments and returns

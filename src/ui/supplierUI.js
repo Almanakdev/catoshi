@@ -9,6 +9,7 @@ import { injectStyles, el, panel, button, money } from './kit.js';
 import { supplier, stockFor, priceFor, tierFor, isOpenAt } from '../data/suppliers.js';
 import { ingredient } from '../data/ingredients.js';
 import { npc as npcById } from '../data/npcs.js';
+import { topRecipeFor, dishesFrom, inventoryCounts } from '../data/economy.js';
 
 const STYLE_ID = 'sp-supplier-style';
 
@@ -28,6 +29,17 @@ const CSS = `
 .sps-row.sps-out{ opacity:.45; }
 .sps-row .sps-ico{ font-size:19px; width:24px; text-align:center; flex:0 0 24px; }
 .sps-row .sps-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sps-row .sps-use{
+  font-size:10.5px; font-weight:700; color:var(--sp-ink-soft);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sps-row .sps-use.sps-dim{ opacity:.7; font-style:italic; }
+.sps-yield{
+  font-size:11.5px; font-weight:800; line-height:1.4;
+  background:rgba(126,163,106,.16); border:1.5px solid rgba(126,163,106,.45);
+  border-radius:11px; padding:6px 9px;
+}
+.sps-yield.sps-thin{ background:rgba(59,47,38,.06); border-color:rgba(59,47,38,.14); color:var(--sp-ink-soft); }
 .sps-row .sps-meta{ font-size:11px; font-weight:700; color:var(--sp-ink-soft); text-align:right; line-height:1.25; }
 .sps-stars{ color:var(--sp-gold); font-size:10px; letter-spacing:.5px; }
 .sps-price{ color:var(--sp-red); font-weight:900; font-variant-numeric:tabular-nums; min-width:42px; text-align:right; }
@@ -111,12 +123,13 @@ export function createSupplierUI(game) {
   const totalRow = el('div', 'sps-total');
   const totalVal = el('b', null, '0¢');
   totalRow.append(el('span', null, 'Total'), totalVal);
+  const yieldRow = el('div', 'sps-yield sps-thin', '');
   const noteRow = el('div', 'sps-note', '');
   const buyBtn = button('Buy', { cls: 'sp-primary', icon: '🧾' });
   const clearBtn = button('Clear', { cls: 'sp-ghost' });
   const btnRow = el('div', 'sp-row');
   btnRow.append(buyBtn, clearBtn);
-  side.append(tierBox, basketHead, basketList, totalRow, noteRow, btnRow);
+  side.append(tierBox, basketHead, basketList, totalRow, yieldRow, noteRow, btnRow);
 
   body.append(left, side);
   p.body.append(body);
@@ -163,6 +176,20 @@ export function createSupplierUI(game) {
     return t;
   }
 
+  /**
+   * One short line saying what this ingredient is actually FOR. Prefers a
+   * recipe the player has learned, because "sells 42" only means something if
+   * they can cook the thing today.
+   */
+  function useLine(ingId) {
+    const top = topRecipeFor(ingId, state);
+    if (!top) return el('div', 'sps-use sps-dim', 'Not used in any recipe yet');
+    if (top.known) {
+      return el('div', 'sps-use', `Used in ${top.recipe.name} (sells ${money(top.recipe.basePrice)})`);
+    }
+    return el('div', 'sps-use sps-dim', `For ${top.recipe.name} (not learned)`);
+  }
+
   // ---------------------------------------------------------------- shelf
   function renderShelf() {
     shelf.textContent = '';
@@ -183,6 +210,7 @@ export function createSupplierUI(game) {
       const nameCol = el('div', 'sps-name');
       nameCol.append(el('div', null, (ing && ing.name) || row.id));
       nameCol.append(el('div', 'sps-stars', stars(ing ? ing.quality : 0.7)));
+      nameCol.append(useLine(row.id));
       node.append(nameCol);
 
       const meta = el('div', 'sps-meta');
@@ -238,6 +266,21 @@ export function createSupplierUI(game) {
     const total = basketTotal();
     const count = basketCount();
     totalVal.textContent = money(total);
+
+    // What this shopping trip is actually worth once it becomes food. Counts
+    // the basket PLUS what is already carried, because that is the pile the
+    // player will be cooking from.
+    const pool = inventoryCounts(state);
+    for (const k in basket) pool[k] = (pool[k] || 0) + basket[k];
+    const yieldOut = dishesFrom(pool, state);
+    if (yieldOut.dishes > 0) {
+      yieldRow.classList.remove('sps-thin');
+      yieldRow.textContent =
+        `This basket makes up to ${yieldOut.dishes} dish${yieldOut.dishes === 1 ? '' : 'es'} worth ${money(yieldOut.value)}`;
+    } else {
+      yieldRow.classList.add('sps-thin');
+      yieldRow.textContent = 'Not enough for a whole dish yet';
+    }
 
     const capacity = typeof state.invCapacity === 'function' ? state.invCapacity() : 0;
     const carried = typeof state.invCount === 'function' ? state.invCount() : 0;

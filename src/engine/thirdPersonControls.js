@@ -12,13 +12,14 @@ import { isTypingInUI } from './inputGuard.js';
 
 export function createThirdPerson(camera, dom, character, colliders, bounds, groundHeightAt = () => 0, dynamicColliders = [], opts = {}) {
   // Tuning is injectable so the same controller drives a 4-unit humanoid (the
-  // original engine) and a 1-unit cat (Sushi Paws) without a second copy.
+  // original engine) and a 1-unit cat (Catushi) without a second copy.
   const TUNE = {
     playerH: 3.5, radius: 1.4, stepUp: 3,
     gravity: 62, jumpV: 21, fallLedge: 1.5,
     walk: 9, run: 18,
     dist: 12, distMin: 5, distMax: 24,
     headScale: 3.0, headFactor: 0.7,
+    cameraCollide: true, cameraPad: 0.45, cameraMin: 1.6,
     ...opts,
   };
   const PLAYER_H = TUNE.playerH;
@@ -47,6 +48,9 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
   const knock = { x: 0, z: 0 };
 
   let lastSpeed = 0;
+  let camDist = TUNE.dist;
+  const camRay = new THREE.Ray();
+  const camHit = new THREE.Vector3();
   const keys = Object.create(null);
   const clearKeys = () => { for (const k in keys) keys[k] = false; };
 
@@ -285,8 +289,29 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
       Math.sin(state.pitch),
       Math.cos(state.yaw) * Math.cos(state.pitch)
     );
-    camera.position.copy(target).addScaledVector(dir, -dist);
-    if (camera.position.y < 1) camera.position.y = 1;
+    // Camera collision: march back from the head toward the desired position and
+    // stop at the first collider. Without this the camera sits inside the shop
+    // cart whenever the player stands at their own counter.
+    let useDist = dist;
+    if (TUNE.cameraCollide) {
+      camRay.origin.copy(target);
+      camRay.direction.copy(dir).negate();
+      let nearest = dist;
+      for (const b of colliders) {
+        // Skip boxes the ray starts inside — the player's own footprint.
+        if (b.containsPoint(target)) continue;
+        const hit = camRay.intersectBox(b, camHit);
+        if (!hit) continue;
+        const d = target.distanceTo(camHit) - TUNE.cameraPad;
+        if (d < nearest) nearest = d;
+      }
+      useDist = Math.max(TUNE.cameraMin, nearest);
+      // Ease back out so leaving a tight spot does not snap the view.
+      camDist += (useDist - camDist) * Math.min(1, dt * (useDist < camDist ? 22 : 6));
+      useDist = camDist;
+    }
+    camera.position.copy(target).addScaledVector(dir, -useDist);
+    if (camera.position.y < 0.6) camera.position.y = 0.6;
     camera.lookAt(target);
   }
 

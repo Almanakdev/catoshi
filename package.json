@@ -1,7 +1,7 @@
 {
-  "name": "sushi-paws",
+  "name": "catushi",
   "version": "1.0.0",
-  "description": "Sushi Paws — a cozy semi-open-world game about a cat who dreams of becoming the greatest sushi master in the city.",
+  "description": "Catushi — a cozy semi-open-world game about a cat who dreams of becoming the greatest sushi master in the city.",
   "type": "module",
   "scripts": {
     "dev": "vite",

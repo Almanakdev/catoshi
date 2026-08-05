@@ -93,7 +93,7 @@ export const QUESTS = [
     desc: "Kuro's new apprentice, huh? Come down to the quay before the ice melts. If you're going to sell fish you should meet one that's still arguing.",
     requires: { quest: 'q01_first_order' },
     objectives: [
-      { type: 'visit', target: 'fish_harbor', count: 1, hint: 'Follow Harbour Avenue north until it smells like salt.', where: { x: -4, z: -78 } },
+      { type: 'visit', target: 'fish_harbor', count: 1, hint: 'North up Harbour Avenue, towards the salt.', where: { x: -4, z: -78 } },
       { type: 'talk',  target: 'mikan',       count: 1, hint: 'She works the end of the quay.', where: { x: -18, z: -120 } },
     ],
     rewards: {
@@ -147,7 +147,7 @@ export const QUESTS = [
     desc: "I'm minding the stall alone today and I promised shrimp to four people. Fetch me some and I'll teach you what my grandmother did with them.",
     requires: { quest: 'q03_serve_three' },
     objectives: [
-      { type: 'purchase', target: 'shrimp', count: 4, hint: 'The harbour sells them cheapest at the morning auction.', where: { x: -10, z: -118 } },
+      { type: 'purchase', target: 'shrimp', count: 4, hint: 'Cheapest at the morning auction.', where: { x: -10, z: -118 } },
       { type: 'deliver',  target: 'yuki',   count: 1, hint: 'Back to the stall in the Old Market.', where: { x: -64, z: 8 } },
     ],
     rewards: {
@@ -234,7 +234,7 @@ export const QUESTS = [
     requires: { quest: 'q06_lost_crate', level: 4 },
     objectives: [
       { type: 'talk', target: 'mikan',      count: 1, hint: 'He runs the auction floor.', where: { x: -10, z: -118 } },
-      { type: 'fish', target: 'mackerel',   count: 5, hint: 'Kaito will not talk technique until you can fill a bucket.', where: { x: -40, z: -138 } },
+      { type: 'fish', target: 'mackerel',   count: 5, hint: 'Fill a bucket before he talks technique.', where: { x: -40, z: -138 } },
       { type: 'fish', target: 'golden_koi', count: 1, hint: 'The far pier, first light, no talking.', where: { x: -66, z: -142 } },
     ],
     // Catching it is what unlocks it: ingredients.js gates `golden_koi` behind
@@ -296,8 +296,8 @@ export const QUESTS = [
     requires: { quest: 'q08_rival_duel', reputation: 70 },
     objectives: [
       { type: 'talk',     target: 'master_kuro',           count: 1, hint: 'The tea shop at the quiet end of the lane.', where: { x: -88, z: 18 } },
-      { type: 'minigame', target: 'page_hunt',      count: 1, hint: 'Old Market storerooms, then the shrine notice board.', where: { x: -96, z: -6 } },
-      { type: 'collect',  target: 'yuzu',           count: 2, hint: 'The page calls for yuzu, and it will not compromise.', where: { x: -64, z: 8 } },
+      { type: 'minigame', target: 'page_hunt',      count: 1, hint: 'Old Market storerooms, then the shrine.', where: { x: -96, z: -6 } },
+      { type: 'collect',  target: 'yuzu',           count: 2, hint: 'The page calls for yuzu. No substitutes.', where: { x: -64, z: 8 } },
       { type: 'deliver',  target: 'master_kuro',           count: 1, hint: 'Bring the page back to her counter.', where: { x: -88, z: 18 } },
     ],
     rewards: {
@@ -327,7 +327,7 @@ export const QUESTS = [
     requires: { quest: 'q09_lost_page', reputation: 130, shopTier: 3 },
     objectives: [
       { type: 'visit', target: 'neon_street', count: 1, hint: 'Neon Lane, after dark.', where: { x: 94, z: -66 } },
-      { type: 'serve', target: null,          count: 14, hint: 'Serve during the festival window (19:00–24:00).', where: { x: 96, z: -104 } },
+      { type: 'serve', target: null,          count: 14, hint: 'Serve in the festival window, 19:00–24:00.', where: { x: 96, z: -104 } },
       { type: 'earn',  target: null,          count: 900, hint: 'Festival crowds pay well — keep quality up.', where: { x: 96, z: -104 } },
     ],
     rewards: {
@@ -355,7 +355,7 @@ export const QUESTS = [
     desc: "I've been watching your queue from the bus stop. You're losing tables at the second rush. Prove you can hold a busy room and I'll come work the counter.",
     requires: { quest: 'q10_night_festival', reputation: 160 },
     objectives: [
-      { type: 'serve', target: null,    count: 20, hint: 'Keep grades at Great or better — she is counting.', where: { x: -28, z: 22.5 } },
+      { type: 'serve', target: null,    count: 20, hint: 'Keep grades at Great or better.', where: { x: -28, z: 22.5 } },
       { type: 'talk',  target: 'hana',  count: 1,  hint: 'She waits by the Home Lane bus stop.', where: { x: 22, z: 100 } },
       { type: 'deliver', target: 'hana', count: 1, hint: 'Hand her an apron and mean it.', where: { x: 22, z: 100 } },
     ],
@@ -386,7 +386,7 @@ export const QUESTS = [
     objectives: [
       { type: 'talk',    target: 'ryu',                    count: 1, hint: 'Register with him at the hall steps.', where: { x: 90, z: 14 } },
       { type: 'cook',    target: 'secret_city_roll',       count: 1, hint: 'The torn-page roll is your final round dish.', where: { x: -28, z: 16 } },
-      { type: 'compete', target: 'city_sushi_championship', count: 1, hint: 'Three rounds. Kage takes the second one seriously.', where: { x: 88, z: 22 } },
+      { type: 'compete', target: 'city_sushi_championship', count: 1, hint: 'Three rounds. Kage means the second one.', where: { x: 88, z: 22 } },
     ],
     rewards: {
       coins: 8000, reputation: 140, xp: 900,
@@ -414,7 +414,7 @@ export const QUESTS = [
     desc: 'The stall looks tired. Bring me sakura petals from the shrine trees and I will make it look like spring for a week.',
     requires: { quest: 'q03_serve_three' },
     objectives: [
-      { type: 'collect', target: 'sakura', count: 3, hint: 'The shrine trees at the west end drop them in spring.', where: { x: -104, z: 14 } },
+      { type: 'collect', target: 'sakura', count: 3, hint: 'Under the shrine trees, in spring.', where: { x: -104, z: 14 } },
       { type: 'deliver', target: 'yuki',   count: 1, hint: 'Back to the stall.', where: { x: -64, z: 8 } },
     ],
     rewards: {

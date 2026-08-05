@@ -69,7 +69,7 @@ export const DEFAULT_SPOTS = [
     id: 'spot_harbor_steps',
     name: 'Harbour Steps',
     district: 'fish_harbor',
-    x: -30, z: -142, r: 3.4, y: -0.08,
+    x: -10.1, z: -61, r: 3.4, y: -0.08,
     quality: [0.44, 0.72],
     blurb: 'Shallow, busy, forgiving. Everybody starts here.',
     pool: [
@@ -82,7 +82,7 @@ export const DEFAULT_SPOTS = [
     id: 'spot_deep_point',
     name: 'The Point',
     district: 'fish_harbor',
-    x: -66, z: -148, r: 3.6, y: -0.10,
+    x: -29.5, z: -63.5, r: 3.6, y: -0.10,
     quality: [0.58, 0.88],
     blurb: 'Cold, deep water past the breakwater. Cast long.',
     pool: [
@@ -96,7 +96,7 @@ export const DEFAULT_SPOTS = [
     id: 'spot_rocky_ledge',
     name: 'Rockpool Ledge',
     district: 'fish_harbor',
-    x: 26, z: -146, r: 3.2, y: -0.06,
+    x: 20.6, z: -63, r: 3.2, y: -0.06,
     quality: [0.52, 0.82],
     blurb: 'Weed, barnacles and things that hide in holes.',
     pool: [
@@ -110,7 +110,7 @@ export const DEFAULT_SPOTS = [
     id: 'spot_tower_canal',
     name: 'Tower Row Canal',
     district: 'downtown',
-    x: 106, z: 60, r: 3.0, y: -0.12,
+    x: 49, z: 29, r: 3.0, y: -0.12,
     quality: [0.28, 0.58],
     blurb: 'Concrete banks and a vending machine glow. Cheap, but it bites.',
     pool: [
@@ -123,7 +123,7 @@ export const DEFAULT_SPOTS = [
     id: 'spot_lantern_pier',
     name: 'Lantern Pier',
     district: 'neon_street',
-    x: 120, z: -134, r: 3.2, y: -0.05,
+    x: 56, z: -54.2, r: 3.2, y: -0.05,
     quality: [0.70, 0.95],
     hidden: true,
     blurb: 'Lanterns on black water. Something gold moves under them.',

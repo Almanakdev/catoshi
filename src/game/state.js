@@ -1,4 +1,4 @@
-// Central, fully serialisable game state for Sushi Paws.
+// Central, fully serialisable game state for Catushi.
 //
 // Rules:
 //  - `state.data` is a plain JSON-safe object. Nothing in here may hold a
@@ -70,6 +70,7 @@ export function defaultData() {
       invertY: false,
       showHints: true,
       cameraShake: false,
+      tutorial: true,         // day-one tutorial; flip back on to replay it
     },
 
     flags: {},

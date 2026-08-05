@@ -1,4 +1,4 @@
-# Sushi Paws
+# Catushi
 
 **From street cat to sushi legend.**
 
@@ -29,7 +29,6 @@ Production build: `npm run build`, then `npm run preview`.
 | `M` | City map |
 | `U` | Upgrades |
 | `F` / `G` / `H` | Meow · sit · stretch |
-| `N` | Advance time 2 hours (debug) |
 | `Esc` | Close panel, or open Settings |
 
 ## The loop
@@ -61,7 +60,8 @@ src/
   cat/             procedural cat rig + optional GLB/VRM loader
   world/           world.js (the hand-authored city), buildings.js, props.js
   game/            state, save, clock, interactions, orders, restaurant, cooking,
-                   fishing, delivery, foraging, quests, npc runtime, bus
+                   fishing, delivery, foraging, quests, npc runtime, bus,
+                   guide (what to do next), tutorial
   data/            ALL content: recipes, ingredients, npcs, quests, suppliers,
                    upgrades, districts, events, progression
   ui/              kit.js (the toolkit) + one module per panel

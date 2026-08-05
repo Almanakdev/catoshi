@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { box, cyl, blob, merge, C } from '../engine/prim.js';
 import { makeCanvas, finish } from '../engine/textures.js';
+import { GAME } from '../config.js';
 
 // ---------------------------------------------------------------------------
-// SUSHI PAWS — building library.
+// CATUSHI — building library.
 //
 // Same contract as the shop builders: every builder takes an options object and
 // returns
@@ -265,7 +266,7 @@ const JP_FONT = '"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto S
  * recognisable as it grows: a cream paper panel in a timber frame, a muted-red
  * disc bearing 寿, two little cat ears, and the name.
  */
-export function makeSushiSign({ vertical = true, name = 'SUSHI PAWS' } = {}) {
+export function makeSushiSign({ vertical = true, name = 'CATUSHI' } = {}) {
   const W = vertical ? 128 : 384;
   const H = vertical ? 384 : 112;
   const canvas = makeCanvas(W, H);
@@ -1840,7 +1841,7 @@ export const BUILDING_TYPES = {
   fishMarketHall: { build: buildFishMarketHall, foot: { w: 20.6, d: 14.1 }, label: 'Fish Market', icon: '🐟', districts: ['fish_harbor'] },
   sushiShop: {
     build: (o = {}) => buildSushiShop(o.tier || 1),
-    foot: { w: 16.0, d: 12.0 }, label: 'Sushi Paws', icon: '🍣', districts: ALL,
+    foot: { w: 16.0, d: 12.0 }, label: GAME.title, icon: '🍣', districts: ALL,
     variants: { t1: { tier: 1 }, t2: { tier: 2 }, t3: { tier: 3 }, t4: { tier: 4 }, t5: { tier: 5 } },
   },
 };

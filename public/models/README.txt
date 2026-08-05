@@ -1,4 +1,4 @@
-Sushi Paws — drop-in cat models
+Catushi — drop-in cat models
 ==============================
 
 By default the game builds its cat PROCEDURALLY from the primitives in

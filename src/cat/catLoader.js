@@ -410,7 +410,13 @@ function wrapLoaded(gltf, vrm, targetHeight, url) {
 export function catFromOptions({ url, targetHeight, timeout, ...catOpts } = {}) {
   if (typeof url === 'string' && url.trim()) {
     return loadCatModel(url, { targetHeight, timeout }).then((loaded) => {
-      if (loaded) return loaded;
+      if (loaded) {
+        // Carry across the knobs a drop-in model can still honour, so swapping
+        // in a GLB doesn't silently change how the gait reads or how NPCs tint.
+        if (Number.isFinite(catOpts.speedScale)) loaded.setSpeedScale(catOpts.speedScale);
+        if (Number.isFinite(catOpts.scale) && catOpts.scale > 0) loaded.setHeight(catOpts.scale);
+        return loaded;
+      }
       console.info('[cat] falling back to the procedural cat (model failed to load):', url);
       return createCat(catOpts);
     });

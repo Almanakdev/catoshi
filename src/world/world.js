@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { paint, box, cyl, merge, C } from '../engine/prim.js';
 import { makeGroundTexture, makeStuccoTexture } from '../engine/textures.js';
 import { WORLD, ROADS, DISTRICTS, HOME, districtAt } from '../data/districts.js';
+import { GAME } from '../config.js';
 import { BUILDING_TYPES, buildBuildingInstances, buildSushiShop } from './buildings.js';
 import { buildPropInstances } from './props.js';
 import { SUPPLIERS } from '../data/suppliers.js';
@@ -9,7 +10,7 @@ import { NPCS } from '../data/npcs.js';
 import { DEFAULT_SPOTS } from '../game/fishing.js';
 
 // ---------------------------------------------------------------------------
-// SUSHI PAWS — the hand-authored city.
+// CATUSHI — the hand-authored city.
 //
 // Everything here is placed by hand, district by district: rows of machiya
 // lining narrow lanes, a working harbour, an office street, a suburb of
@@ -55,43 +56,65 @@ const PAL = {
 
 /** Narrow stone pedestrian lanes. Same shape as ROADS but paved, not asphalt. */
 const LANES = [
-  // Old Market — the alley grid. Deliberately 4–5 wide: alleys, not avenues.
-  // (`upper`/`lower` are named for the map, not the axis: -Z is north.)
-  { id: 'lane_west', x: -100, z: 2, w: 5, d: 84, name: 'Cooper Alley' },
-  { id: 'lane_mid', x: -70, z: 2, w: 5, d: 84, name: 'Rice Alley' },
-  { id: 'lane_east', x: -42, z: 12, w: 5, d: 64, name: 'Lantern Alley' },
-  { id: 'lane_upper', x: -84, z: -24, w: 76, d: 5, name: 'Upper Lane' },
-  { id: 'lane_lower', x: -84, z: 32, w: 76, d: 5, name: 'Lower Lane' },
-  { id: 'shrine_walk', x: -110, z: 44, w: 4, d: 24, name: 'Shrine Walk' },
-  // Residential — a garden lane behind the main loop.
-  { id: 'garden_lane', x: 6, z: 84, w: 112, d: 6, name: 'Garden Lane' },
+  // Old Market — the back lane behind the Market Road frontage, and the gravel
+  // walk down into the shrine precinct. Both deliberately narrow.
+  { id: 'lane_back', x: -48, z: -7.9, w: 20, d: 6, name: 'Back Lane' },
+  { id: 'lane_shrine', x: -51, z: 10, w: 3.6, d: 10, name: 'Shrine Walk' },
+  { id: 'lane_market', x: -31.5, z: 15, w: 3.6, d: 22, name: 'Lantern Alley' },
   // Downtown — the canal towpath.
-  { id: 'canal_walk', x: 111, z: 59, w: 5, d: 34, name: 'Canal Walk' },
+  { id: 'canal_walk', x: 52.6, z: 33, w: 4, d: 16, name: 'Canal Walk' },
 ];
 
-/** Water bodies. Non-overlapping rects; everything z < WORLD.waterZ is sea. */
+/**
+ * Water bodies. Non-overlapping rects. The open sea runs north from
+ * WORLD.waterZ (-62); the harbour frontage is notched 1.6 units further south
+ * so the quay wall has a face to stand on, and Harbour Avenue runs out onto a
+ * mole that splits the two halves of the basin.
+ */
 const WATER = [
-  { id: 'sea', x0: -260, x1: 260, z0: -420, z1: WORLD.waterZ },
-  { id: 'basin', x0: -84, x1: 40, z0: WORLD.waterZ, z1: -138 },
-  { id: 'inlet', x0: 110, x1: 140, z0: WORLD.waterZ, z1: -128 },
-  { id: 'canal', x0: 98, x1: 107, z0: 44, z1: 74 },
+  { id: 'sea_w', x0: -160, x1: -6, z0: -300, z1: WORLD.waterZ },
+  { id: 'sea_e', x0: 6, x1: 160, z0: -300, z1: WORLD.waterZ },
+  { id: 'sea_n', x0: -6, x1: 6, z0: -300, z1: -68 },
+  { id: 'basin_w', x0: -30, x1: -6, z0: WORLD.waterZ, z1: -60.4 },
+  { id: 'basin_e', x0: 6, x1: 24, z0: WORLD.waterZ, z1: -60.4 },
+  { id: 'inlet', x0: 50.5, x1: 62, z0: WORLD.waterZ, z1: -49 },
+  { id: 'canal', x0: 45.4, x1: 50.2, z0: 25.5, z1: 41 },
 ];
 
-/** Piers running north from the basin quay at z = -138. Deck at y = 0.5. */
+/** Piers running north from the basin edge at z = -60.4. Deck at y = 0.5. */
 const DECK_Y = 0.5;
 const PIERS = [
-  { id: 'pier_west', x: -60, w: 5, z0: -150, z1: -138 },
-  { id: 'pier_mid', x: -20, w: 6, z0: -152, z1: -138 },
-  { id: 'pier_east', x: 20, w: 5, z0: -149, z1: -138 },
+  { id: 'pier_west', x: -10.1, w: 5, z0: -67, z1: -60.4 },
+  { id: 'pier_east', x: 15, w: 4.5, z0: -66, z1: -60.4 },
 ];
 
 /**
  * The home plaza — the paved square the player spawns on, wrapped around the
- * shop. Buildings frame it on three sides; the scatterers stay out of it so
- * the dressing inside can be placed by hand.
+ * shop. Market Road closes it to the north and Harbour Avenue to the east;
+ * buildings close the other two sides. The scatterers stay out of it so the
+ * dressing inside can be placed by hand.
+ *
+ * The square runs a long way south of the spawn on purpose. The chase camera
+ * sits ~9.5 units behind the player, so on a new game it hangs over (-12, 28):
+ * that whole apron has to stay open or the opening shot is a wall of masonry.
+ * See CAM_KEEP / CAM_LANE below — every hand-placed prop is checked against
+ * them, and the south building row is set back to z = 36.5.
  */
-const PLAZA = { x0: -39.8, x1: -14.2, z0: 8.5, z1: 48.5 };
-const PLAZA_KEEP = { x0: -41, x1: -13, z0: 3, z1: 50 };
+const PLAZA = { x0: -21.5, x1: -4.5, z0: 4.4, z1: 34.0 };
+const PLAZA_KEEP = { x0: -22, x1: -4.2, z0: 4, z1: 34.6 };
+
+/**
+ * The opening-shot keep-outs.
+ *  · CAM_KEEP  — the disc the chase camera lives in on a new game. Nothing
+ *                taller than CAM_LOW may stand in it.
+ *  · CAM_LANE  — the walk from the spawn to the shop door plus the camera's
+ *                run-back behind it. Same height rule.
+ * Flat decals, planters and potted plants (all ≤ 0.5 tall) are welcome in
+ * both — it is only the shoulder-height stuff that ruins the shot.
+ */
+const CAM_KEEP = { x: HOME.spawn.x, z: HOME.spawn.z + 9, r: 7 };
+const CAM_LANE = { x0: -15, x1: -9, z0: 12, z1: 34 };
+const CAM_LOW = 0.6;
 
 // ---------------------------------------------------------------------------
 // Small maths helpers
@@ -195,20 +218,23 @@ export function createWorld(game, { gradientMap = null } = {}) {
   }));
 
   // Land outline: a big rect from the shoreline south, notched for the harbour
-  // basin and the neon inlet, with the downtown canal punched out as a hole.
+  // basin, the mole Harbour Avenue runs out on and the neon inlet, with the
+  // downtown canal punched out as a hole. Walked west → east along the coast.
   const land = new THREE.Shape();
   const P = (x, z) => land.lineTo(x, -z);
-  land.moveTo(-260, -260);            // (x=-260, z=260) SW
-  P(260, 260); P(260, WORLD.waterZ);
-  P(140, WORLD.waterZ); P(140, -128); P(110, -128); P(110, WORLD.waterZ);
-  P(40, WORLD.waterZ); P(40, -138); P(-84, -138); P(-84, WORLD.waterZ);
-  P(-260, WORLD.waterZ);
+  land.moveTo(-160, -140);            // (x=-160, z=140) SW
+  P(160, 140); P(160, WORLD.waterZ);
+  P(62, WORLD.waterZ); P(62, -49); P(50.5, -49); P(50.5, WORLD.waterZ);   // neon inlet
+  P(24, WORLD.waterZ); P(24, -60.4); P(6, -60.4);                          // east basin
+  P(6, -68); P(-6, -68);                                                   // the mole
+  P(-6, -60.4); P(-30, -60.4); P(-30, WORLD.waterZ);                       // west basin
+  P(-160, WORLD.waterZ);
   land.closePath();
   const canalHole = new THREE.Path();
-  canalHole.moveTo(98, -44);
-  canalHole.lineTo(107, -44);
-  canalHole.lineTo(107, -74);
-  canalHole.lineTo(98, -74);
+  canalHole.moveTo(45.4, -25.5);
+  canalHole.lineTo(50.2, -25.5);
+  canalHole.lineTo(50.2, -41);
+  canalHole.lineTo(45.4, -41);
   canalHole.closePath();
   land.holes.push(canalHole);
 
@@ -230,11 +256,14 @@ export function createWorld(game, { gradientMap = null } = {}) {
   const patchParts = [];
   // Patches are clipped by hand so none of them ever paints over water.
   const districtPatch = {
-    old_market: [{ x: -72, z: 4, w: 96, d: 92, r: 16 }],
-    fish_harbor: [{ x: -8, z: -104.5, w: 124, d: 67, r: 14 }],
-    downtown: [{ x: 70.5, z: 22, w: 53, d: 104, r: 16 }, { x: 119.5, z: 22, w: 25, d: 104, r: 12 }],
-    residential: [{ x: 6, z: 104, w: 112, d: 80, r: 18 }],
-    neon_street: [{ x: 82, z: -104, w: 52, d: 76, r: 16 }, { x: 123, z: -96, w: 26, d: 60, r: 12 }],
+    old_market: [{ x: -34, z: 4, w: 50, d: 54, r: 12 }],
+    fish_harbor: [{ x: 2, z: -44, w: 70, d: 33, r: 10 }],
+    // Clipped around the canal so the towpath green never paints over water.
+    downtown: [{ x: 31, z: 10, w: 28, d: 54, r: 10 },
+      { x: 44, z: 2, w: 18, d: 38, r: 8 },
+      { x: 57.5, z: 20, w: 15, d: 34, r: 8 }],
+    residential: [{ x: 0, z: 52, w: 62, d: 38, r: 12 }],
+    neon_street: [{ x: 36, z: -40, w: 26, d: 34, r: 8 }, { x: 56, z: -33, w: 18, d: 20, r: 7 }],
   };
   for (const d of DISTRICTS) {
     for (const p of districtPatch[d.id] || []) {
@@ -244,21 +273,18 @@ export function createWorld(game, { gradientMap = null } = {}) {
 
   // Gap fillers: small parks and plazas so no bare ground shows between zones.
   const FILLERS = [
-    { x: -110, z: 46, w: 26, d: 28, r: 10, c: PAL.gravel },      // shrine precinct
-    { x: -12, z: -60, w: 52, d: 30, r: 12, c: PAL.park },        // harbour park
-    { x: -96, z: -60, w: 44, d: 26, r: 12, c: PAL.park },        // west green
-    { x: 26, z: 40, w: 36, d: 44, r: 12, c: PAL.park },          // mid park
-    { x: 30, z: -30, w: 46, d: 34, r: 12, c: PAL.park },         // link park
-    { x: -46, z: 74, w: 40, d: 26, r: 12, c: PAL.park },         // suburb green
-    { x: 92, z: 92, w: 44, d: 30, r: 12, c: PAL.park },          // east green
-    { x: 74, z: -134, w: 26, d: 26, r: 10, c: PAL.neonGround },  // festival square
-    { x: -60, z: -132, w: 60, d: 12, r: 4, c: PAL.gravel },      // harbour apron
-    { x: 16, z: -132, w: 56, d: 12, r: 4, c: PAL.gravel },
-    { x: 120, z: 59, w: 22, d: 36, r: 8, c: PAL.park },          // canal green
-    { x: -30, z: -88, w: 60, d: 26, r: 12, c: PAL.park },        // harbour approach
-    { x: 30, z: -88, w: 46, d: 26, r: 12, c: PAL.park },
-    { x: 62, z: -84, w: 22, d: 30, r: 10, c: PAL.park },         // neon approach
-    { x: 46, z: 62, w: 34, d: 30, r: 12, c: PAL.park },          // downtown green
+    { x: -50, z: 10, w: 18, d: 22, r: 7, c: PAL.gravel },        // shrine precinct
+    { x: -46, z: 40, w: 26, d: 16, r: 7, c: PAL.park },          // market green
+    { x: 12, z: 22, w: 22, d: 24, r: 8, c: PAL.park },           // mid park
+    { x: -20, z: -18, w: 22, d: 16, r: 6, c: PAL.park },         // north green
+    { x: 20, z: -12, w: 24, d: 18, r: 7, c: PAL.park },          // link park
+    { x: -20, z: 44, w: 24, d: 16, r: 7, c: PAL.park },          // suburb green
+    { x: 24, z: 42, w: 20, d: 16, r: 7, c: PAL.park },
+    { x: 4, z: -50, w: 46, d: 12, r: 4, c: PAL.gravel },         // harbour apron
+    { x: -22, z: -50, w: 18, d: 12, r: 4, c: PAL.gravel },
+    { x: 33, z: -50, w: 12, d: 12, r: 4, c: PAL.neonGround },    // festival square
+    { x: 54, z: 33, w: 12, d: 20, r: 6, c: PAL.park },           // canal green
+    { x: 60, z: 4, w: 12, d: 20, r: 6, c: PAL.park },            // east green
   ];
   for (const f of FILLERS) patchParts.push(roundedRect(f.x, f.z, f.w, f.d, f.r, f.c, 0.02));
 
@@ -279,10 +305,18 @@ export function createWorld(game, { gradientMap = null } = {}) {
     for (let z = PLAZA.z0 + 3.2; z < PLAZA.z1 - 1.5; z += 3.2) {
       patchParts.push(flatRect(cx, z, pw - 2.6, 0.13, PAL.plazaJoint, 0.03));
     }
-    // A darker inlaid band right in front of the shop door, so the eye is
-    // pulled from the spawn point straight to the counter.
-    patchParts.push(flatRect(HOME.shop.x, 27.5, 4.4, 9.5, PAL.plazaEdge, 0.032));
-    patchParts.push(flatRect(HOME.shop.x, 27.5, 3.6, 8.7, PAL.plazaTile, 0.034));
+    // A darker inlaid runway down the middle: it runs from the shop door all
+    // the way to the south edge of the square, so the eye is pulled from the
+    // spawn point straight to the counter — and it is the *only* dressing in
+    // the camera lane, because it is flat.
+    const rz = (CAM_LANE.z0 + CAM_LANE.z1) / 2;
+    const rd = CAM_LANE.z1 - CAM_LANE.z0;
+    patchParts.push(flatRect(HOME.shop.x, rz, 4.4, rd, PAL.plazaEdge, 0.032));
+    patchParts.push(flatRect(HOME.shop.x, rz, 3.6, rd - 0.8, PAL.plazaTile, 0.034));
+    // Paving chevrons across the runway — flat, so the camera flies over them.
+    for (let z = CAM_LANE.z0 + 2.2; z < CAM_LANE.z1 - 1; z += 2.6) {
+      patchParts.push(flatRect(HOME.shop.x, z, 3.0, 0.16, PAL.plazaJoint, 0.036));
+    }
   }
 
   // =========================================================================
@@ -400,23 +434,29 @@ export function createWorld(game, { gradientMap = null } = {}) {
     if (cur < x1) quayWall((cur + x1) / 2, z, x1 - cur, thickness);
   }
 
-  // Open coast either side of the basin / inlet.
-  shorelineX(-178, -84, WORLD.waterZ + 0.7);
-  shorelineX(40, 110, WORLD.waterZ + 0.7);
-  shorelineX(140, 178, WORLD.waterZ + 0.7);
-  // Basin: west wall, south quay (with pier mouths), east wall.
-  quayWall(-84.7, -145, 1.4, 14);
-  shorelineX(-84, 40, -137.3);
-  quayWall(40.7, -145, 1.4, 14);
+  // Open coast either side of the harbour, set back so the wall stands on land.
+  shorelineX(-108, -30, WORLD.waterZ + 0.7);
+  shorelineX(24, 50.5, WORLD.waterZ + 0.7);
+  shorelineX(62, 108, WORLD.waterZ + 0.7);
+  // The harbour frontage itself: a thinner bulkhead, because the quay road runs
+  // 0.9 units behind it. Pier mouths are cut out automatically.
+  shorelineX(-30, -6, -59.95, 0.9);
+  shorelineX(6, 24, -59.95, 0.9);
+  quayWall(-30.45, -61.2, 0.9, 1.6);          // returns at the basin corners
+  quayWall(24.45, -61.2, 0.9, 1.6);
+  // Harbour Avenue's mole, walled on three sides.
+  quayWall(-5.55, -64.2, 0.9, 7.6);
+  quayWall(5.55, -64.2, 0.9, 7.6);
+  quayWall(0, -67.55, 12, 0.9);
   // Neon inlet.
-  quayWall(109.3, -140, 1.4, 24);
-  quayWall(125, -127.3, 30, 1.4);
-  quayWall(140.7, -140, 1.4, 24);
+  quayWall(50.05, -55.5, 0.9, 13);
+  quayWall(56.25, -49.45, 13.3, 0.9);
+  quayWall(62.45, -55.5, 0.9, 13);
   // Downtown canal — low kerbs, open at both ends so nobody gets boxed in.
-  quayParts.push(box(0.6, 0.5, 30, 97.7, 0.05, 59, PAL.stone));
-  quayParts.push(box(0.6, 0.5, 30, 107.3, 0.05, 59, PAL.stone));
-  colliders.push(new THREE.Box3(new THREE.Vector3(97.4, 0, 44), new THREE.Vector3(98.0, 0.4, 74)));
-  colliders.push(new THREE.Box3(new THREE.Vector3(107.0, 0, 44), new THREE.Vector3(107.6, 0.4, 74)));
+  quayParts.push(box(0.6, 0.5, 15.5, 45.1, 0.05, 33.25, PAL.stone));
+  quayParts.push(box(0.6, 0.5, 15.5, 50.5, 0.05, 33.25, PAL.stone));
+  colliders.push(new THREE.Box3(new THREE.Vector3(44.8, 0, 25.5), new THREE.Vector3(45.4, 0.4, 41)));
+  colliders.push(new THREE.Box3(new THREE.Vector3(50.2, 0, 25.5), new THREE.Vector3(50.8, 0.4, 41)));
 
   // Piers: plank decks, edge kerbs, cross beams.
   for (const p of PIERS) {
@@ -508,169 +548,141 @@ export function createWorld(game, { gradientMap = null } = {}) {
   const M = (v) => ({ id: 'machiya', v });
   const S = (v) => ({ id: 'marketStall', v });
 
-  // ---------------------------------------------------- OLD MARKET (27) ----
-  // Dense machiya rows along Market Road and the alley grid, a stall square,
-  // the tea house, the bathhouse and a shrine precinct (props) to the north.
-  // Bands sit BETWEEN the alleys so no row ever crosses one.
-  // North side of Market Road (fronts look south).
-  shelf({ face: '+z', edge: -7.2, a0: -121, a1: -103, district: 'old_market', tag: 'market_road_n',
-    items: [M('sand'), M('cream')] });
-  shelf({ face: '+z', edge: -7.2, a0: -97, a1: -73, district: 'old_market', tag: 'market_road_n',
-    items: [M('sand'), M('cream'), { id: 'yatai' }] });
-  shelf({ face: '+z', edge: -7.2, a0: -67, a1: -51, district: 'old_market', tag: 'market_road_n',
-    items: [M('cream'), { id: 'yatai' }] });
-  // South side of Market Road.
-  shelf({ face: '-z', edge: 7.2, a0: -121, a1: -103, district: 'old_market', tag: 'market_road_s',
-    items: [{ id: 'teaHouse' }, M('cream')] });
-  shelf({ face: '-z', edge: 7.2, a0: -97, a1: -73, district: 'old_market', tag: 'market_road_s',
-    items: [{ id: 'bathhouse' }, M('sand')] });
+  // ---------------------------------------------------- OLD MARKET (17) ----
+  // The compact rebuild: half the buildings of the old sprawl, packed twice as
+  // tight. Rows sit shoulder to shoulder with 0.5-1.5 unit gaps so Market Road
+  // reads as a canyon, and every gap in a row is a courtyard an NPC lives in —
+  // every home and schedule point is checked against the finished colliders.
 
-  // Taro's Pantry — on the corner of Lantern Alley, facing west.
-  place('marketStall', -47.6, -8.9, -Math.PI / 2, 'rice', 'old_market', 'market_pantry');
+  // -- north side of Market Road (fronts look south onto it) ----------------
+  shelf({ face: '+z', edge: -4.3, a0: -37.5, a1: -24, district: 'old_market', tag: 'market_road_n',
+    items: [M('sand'), { id: 'yatai' }], gap: 0.9 });
+  // Taro's Pantry sits mid-run, on the kerb right by his stall spot.
+  place('marketStall', -21, -5.95, 0, 'rice', 'old_market', 'market_pantry');
+  shelf({ face: '+z', edge: -4.3, a0: -18.5, a1: -4.4, district: 'old_market', tag: 'market_road_n',
+    items: [S('veg'), M('cream')], gap: 0.9 });
 
-  // The stall square (Yuki's is the centrepiece).
-  place('marketStall', -64.8, 10.6, Math.PI, 'sweets', 'old_market', 'square');
-  place('marketStall', -58, 14, Math.PI, 'rice', 'old_market', 'yuki_stall');
-  place('marketStall', -51, 10.6, Math.PI, 'veg', 'old_market', 'square');
-  place('marketStall', -64.8, 19.2, Math.PI, 'fish', 'old_market', 'square');
-  place('festivalStall', -51, 19.2, Math.PI, 'goldfish', 'old_market', 'square');
+  // -- the back lane: a second row behind the frontage. Taro and Chacha live
+  //    in the courtyard between the two, which is why the lane is here at all.
+  place('machiya', -50, -14.55, 0, 'single', 'old_market', 'back_lane');
+  place('machiya', -41.5, -14.55, 0, 'sage', 'old_market', 'back_lane');
 
-  // ---- the home plaza frame -----------------------------------------------
-  // Before this the plaza was a bare apron with the nearest row 25 units away.
-  // These four runs close it into a courtyard: a shallow stall row backing
-  // Market Road to the north, a machiya terrace facing west down the east
-  // side, a terrace facing north across the south side, and a single stall on
-  // the far bank of Lantern Alley to the west. The rows are set out so the
-  // shop's reserved rect, Market Road, Harbour Avenue and both alleys stay
-  // clear — see the placement validator below, which rejects anything that
-  // does not.
-  // Directly behind the shop the stalls turn around and trade onto Market Road
-  // — a stall facing a blank wall a metre away would be nonsense.
-  shelf({ face: '-z', edge: 5.65, a0: -39, a1: -24, district: 'old_market', tag: 'plaza_n',
-    items: [S('veg'), S('sweets')] });
-  shelf({ face: '+z', edge: 8.9, a0: -22, a1: -8, district: 'old_market', tag: 'plaza_n',
-    items: [S('rice'), { id: 'festivalStall', v: 'goldfish' }] });
-  shelf({ face: '-x', edge: -14, a0: 13, a1: 43, district: 'old_market', tag: 'plaza_e',
-    items: [M('cream'), S('fish'), M('sand')], gap: 1.2 });
-  // The south terrace is held back to z = 50: the chase camera trails ~6 units
-  // behind the player, so anything nearer would put it inside a wall whenever
-  // the player stands at the south end of the square and looks back at the shop.
-  shelf({ face: '-z', edge: 50, a0: -39, a1: -14, district: 'old_market', tag: 'plaza_s',
-    items: [M('sage'), { id: 'teaHouse' }, S('sweets')], gap: 1.0 });
-  place('marketStall', -46.65, 25.35, Math.PI / 2, 'veg', 'old_market', 'plaza_w');
+  // -- south side of Market Road: the stall run onto the market square ------
+  // The goldfish stall used to sit at x = -27, two units in front of Yuki's
+  // counter: you shopped from a 3-unit slot with the camera in your back. It
+  // is now further west, which leaves Yuki's frontage open to the road.
+  place('marketStall', -41.5, 5.95, Math.PI, 'sweets', 'old_market', 'market_road_s');
+  place('festivalStall', -36, 6, Math.PI, 'goldfish', 'old_market', 'market_road_s');
 
-  // North of Upper Lane (fronts look south onto it).
-  shelf({ face: '+z', edge: -26.8, a0: -121, a1: -103, district: 'old_market', tag: 'upper_lane_n',
-    items: [M('single'), { id: 'festivalStall', v: 'prizes' }] });
-  shelf({ face: '+z', edge: -26.8, a0: -97, a1: -73, district: 'old_market', tag: 'upper_lane_n',
-    items: [M('sand'), M('sage'), { id: 'yatai' }] });
-  shelf({ face: '+z', edge: -26.8, a0: -67, a1: -45, district: 'old_market', tag: 'upper_lane_n',
-    items: [S('sweets'), M('cream')] });
-  // South of Lower Lane (fronts look north onto it).
-  shelf({ face: '-z', edge: 34.8, a0: -97, a1: -73, district: 'old_market', tag: 'lower_lane_s',
-    items: [M('cream'), M('sage')] });
-  shelf({ face: '-z', edge: 34.8, a0: -67, a1: -45, district: 'old_market', tag: 'lower_lane_s',
-    items: [M('sand'), S('fish')] });
+  // -- the market square, west of the plaza ---------------------------------
+  place('marketStall', -27, 12, Math.PI, 'veg', 'old_market', 'yuki_stall');
+  place('marketStall', -36, 14, Math.PI, 'fish', 'old_market', 'square');
+  // Master Kuro's tea house closes the square to the south; the bathhouse
+  // anchors the far west end of the quarter.
+  place('teaHouse', -40, 24, Math.PI, null, 'old_market', 'tea_house');
+  place('bathhouse', -54, 24.5, Math.PI, null, 'old_market', 'bathhouse');
 
-  // --------------------------------------------------- FISH HARBOUR (18) ---
-  // Everything faces the water across the quay road.
-  place('fishMarketHall', -40, -108.9, Math.PI, null, 'fish_harbor', 'fish_market');
-  shelf({ face: '-z', edge: -116, a0: 14, a1: 54, district: 'fish_harbor', tag: 'warehouses',
-    items: [{ id: 'warehouse' }, { id: 'warehouse' }] });
-  shelf({ face: '-z', edge: -116, a0: -79, a1: -52, district: 'fish_harbor', tag: 'quay_machiya',
-    items: [M('sage'), M('cream'), M('sand')] });
-  // Dock sheds on the working apron, facing back at the quay road.
-  shelf({ face: '+z', edge: -128.4, a0: -80, a1: -63, district: 'fish_harbor', tag: 'sheds',
-    items: [{ id: 'dockShed' }, { id: 'dockShed' }] });
-  shelf({ face: '+z', edge: -128.4, a0: -50, a1: -33, district: 'fish_harbor', tag: 'sheds',
-    items: [{ id: 'dockShed' }, { id: 'dockShed' }] });
-  shelf({ face: '+z', edge: -128.4, a0: -15, a1: -7, district: 'fish_harbor', tag: 'sheds',
-    items: [{ id: 'dockShed' }] });
-  shelf({ face: '+z', edge: -128.4, a0: 7, a1: 15, district: 'fish_harbor', tag: 'sheds',
-    items: [{ id: 'dockShed' }] });
-  shelf({ face: '+z', edge: -128.4, a0: 26, a1: 43, district: 'fish_harbor', tag: 'sheds',
-    items: [{ id: 'dockShed' }, { id: 'dockShed' }] });
-  // Suppliers: Mikan's catch (kerbside) and the auction floor (on the apron).
-  place('marketStall', -16, -114.5, Math.PI, 'fish', 'fish_harbor', 'mikan_catch');
-  place('marketStall', 18, -131.5, Math.PI / 2, 'fish', 'fish_harbor', 'harbor_auction');
-  place('marketStall', -26, -114.5, Math.PI, 'veg', 'fish_harbor', 'quayside');
-  place('marketStall', 8, -114.5, Math.PI, 'fish', 'fish_harbor', 'quayside');
+  // -- the home plaza frame -------------------------------------------------
+  // Market Road closes the plaza to the north, Harbour Avenue to the east and
+  // this machiya to the west.
+  place('machiya', -25.85, 22, Math.PI / 2, 'sage', 'old_market', 'plaza_w');
+  // There is deliberately NO south row. One used to front at z = 29, which put
+  // the opening shot inside a machiya wall — the chase camera hangs over
+  // (-12, 28) on a new game (CAM_KEEP). The square is closed instead by the
+  // residential house row at z = 38.5, ten units behind the camera, with an
+  // avenue of cherry trees and lantern posts at z ~ 36 reading as its south
+  // edge. The approach the player walks in from stays open, which is its job.
 
-  // ------------------------------------------------------- DOWNTOWN (20) ---
-  place('trainStation', 64, -13.6, 0, null, 'downtown', 'station');
-  place('konbini', 60, 10, Math.PI, null, 'downtown', 'konbini');
-  // Tower Row — offices down both sides. The canal blocks the east side
-  // north of z = 44, so that run stops short and a konbini caps it.
-  shelf({ face: '+x', edge: 86.4, a0: 8, a1: 74, district: 'downtown', tag: 'tower_row_w',
-    items: [{ id: 'officeBlock', v: 'mid' }, { id: 'officeBlock', v: 'tall' },
-      { id: 'officeBlock', v: 'low' }, { id: 'officeBlock', v: 'warm' },
-      { id: 'officeBlock', v: 'mid' }], gap: 2.2 });
-  shelf({ face: '+x', edge: 86.4, a0: -26, a1: -14, district: 'downtown', tag: 'tower_row_w',
-    items: [{ id: 'officeBlock', v: 'low' }], gap: 2.2 });
-  shelf({ face: '-x', edge: 97.6, a0: 7, a1: 34, district: 'downtown', tag: 'tower_row_e',
-    items: [{ id: 'officeBlock', v: 'tall' }, { id: 'officeBlock', v: 'mid' }], gap: 2.2 });
-  shelf({ face: '-x', edge: 97.6, a0: 34, a1: 44, district: 'downtown', tag: 'tower_row_e',
-    items: [{ id: 'konbini' }] });
-  shelf({ face: '-x', edge: 101.6, a0: -26, a1: -8, district: 'downtown', tag: 'east_service',
-    items: [{ id: 'warehouse' }] });
-  // Canal-side office, east bank.
-  shelf({ face: '-x', edge: 114, a0: 42, a1: 58, district: 'downtown', tag: 'canal_east',
-    items: [{ id: 'officeBlock', v: 'warm' }] });
-  // Market Road frontage, east end.
-  shelf({ face: '-z', edge: 7.2, a0: 107, a1: 132, district: 'downtown', tag: 'market_road_s',
-    items: [{ id: 'apartment', v: 'four' }, { id: 'konbini' }] });
-  shelf({ face: '+z', edge: -7.2, a0: 116, a1: 132, district: 'downtown', tag: 'market_road_n',
-    items: [{ id: 'apartment', v: 'three' }] });
-  shelf({ face: '-z', edge: 7.2, a0: 44, a1: 56, district: 'downtown', tag: 'market_road_s',
-    items: [{ id: 'izakaya' }] });
-  shelf({ face: '+z', edge: -7.2, a0: 44, a1: 56, district: 'downtown', tag: 'market_road_n',
-    items: [{ id: 'izakaya' }] });
-  shelf({ face: '+z', edge: -7.2, a0: 78, a1: 88, district: 'downtown', tag: 'market_road_n',
-    items: [{ id: 'konbini' }] });
+  // --------------------------------------------------- FISH HARBOUR (11) ---
+  // Everything faces the water across the quay road. The hall sits back on the
+  // approach so you meet it head-on coming up Harbour Avenue.
+  place('fishMarketHall', -17, -28, Math.PI, null, 'fish_harbor', 'fish_market');
+  place('warehouse', -21, -45.65, Math.PI, null, 'fish_harbor', 'quay_west');
+  place('marketStall', -6.8, -49, Math.PI, 'fish', 'fish_harbor', 'mikan_catch');
+  // This shed used to sit 1.9 units north of Mikan's stall, which made the walk
+  // to the quay a slot. It is now tucked against the market hall instead, and
+  // the apron in front of the stall is open ground.
+  place('dockShed', -8.5, -38.65, Math.PI, null, 'fish_harbor', 'sheds');
+  place('dockShed', -33, -44, Math.PI, null, 'fish_harbor', 'sheds');
+  place('marketStall', -30, -34.5, Math.PI / 2, 'veg', 'fish_harbor', 'quayside');
+  place('marketStall', 16.3, -49.5, Math.PI, 'fish', 'fish_harbor', 'harbor_auction');
+  place('dockShed', 9.5, -45.5, Math.PI, null, 'fish_harbor', 'sheds');
+  place('dockShed', 26, -49.2, Math.PI, null, 'fish_harbor', 'sheds');
+  // The two quay machiya are spread out so the walk from Harbour Avenue up to
+  // Neon Lane is a street, not a pair of 1.7-unit slots.
+  place('machiya', 23.5, -34.5, 0, 'sand', 'fish_harbor', 'quay_machiya');
+  place('machiya', 11, -32, 0, 'sage', 'fish_harbor', 'quay_machiya');
 
-  // ---------------------------------------------------- RESIDENTIAL (24) ---
+  // ------------------------------------------------------- DOWNTOWN (11) ---
+  // Tower Row is the spine. The station takes the whole west block, the towers
+  // stack up east of the canal, and the konbini holds the Market Road corner.
+  place('trainStation', 27, 22, Math.PI, null, 'downtown', 'station');
+  place('konbini', 22.5, 8.5, Math.PI, null, 'downtown', 'konbini');
+  // Held back from the kerb: at edge 43.8 this block stood square across the
+  // head of Neon Lane, so walking north up the lane put the camera in its wall.
+  shelf({ face: '-x', edge: 48, a0: -16.5, a1: -4.3, district: 'downtown', tag: 'tower_row_e',
+    items: [{ id: 'officeBlock', v: 'low' }] });
+  place('officeBlock', 63, -10, Math.PI, 'tall', 'downtown', 'east_block');
+  place('officeBlock', 59, 10, Math.PI, 'mid', 'downtown', 'east_block');
+  place('izakaya', 48, 8, -Math.PI / 2, null, 'downtown', 'tower_row_e');
+  place('izakaya', 50, 19, -Math.PI / 2, null, 'downtown', 'canal_west');
+  place('konbini', 60, 26, Math.PI, null, 'downtown', 'canal_east');
+  place('officeBlock', 62.5, 37, Math.PI, 'low', 'downtown', 'canal_east');
+  place('apartment', 20, 34, Math.PI, 'four', 'downtown', 'apartments');
+  place('warehouse', 20, -11.9, 0, null, 'downtown', 'service');
+  place('apartment', 11, 12, Math.PI, 'two', 'downtown', 'market_block');
+
+  // ---------------------------------------------------- RESIDENTIAL (14) ---
+  // Gardens are switched off on the tight plots: the fence line reaches 1.3
+  // units past the wall and would otherwise swallow a neighbour's doorstep.
   const H = (v) => ({ id: 'house', v });
-  shelf({ face: '+z', edge: 98.2, a0: -52, a1: -18, district: 'residential', tag: 'home_lane_n',
-    items: [{ id: 'teaHouse' }, H('blue'), H('sage')], gap: 1.4 });
-  shelf({ face: '+z', edge: 98.2, a0: 10, a1: 44, district: 'residential', tag: 'home_lane_n',
-    items: [{ id: 'konbini' }, H('cream'), H('blue')], gap: 1.4 });
-  shelf({ face: '-z', edge: 110.2, a0: -52, a1: -30, district: 'residential', tag: 'home_lane_s',
-    items: [H('sage'), H('pink')], gap: 1.4 });
-  shelf({ face: '-z', edge: 110.2, a0: -24, a1: -7, district: 'residential', tag: 'home_lane_s',
-    items: [H('cream')], gap: 1.4 });
-  shelf({ face: '-z', edge: 110.2, a0: 7, a1: 24, district: 'residential', tag: 'home_lane_s',
-    items: [H('blue')], gap: 1.4 });
-  shelf({ face: '-z', edge: 110.2, a0: 30, a1: 52, district: 'residential', tag: 'home_lane_s',
-    items: [H('sage'), H('cream')], gap: 1.4 });
-  // Garden Lane, both sides (the lane runs east–west at z = 84).
-  shelf({ face: '+z', edge: 80.4, a0: -50, a1: -28, district: 'residential', tag: 'garden_lane_n',
-    items: [H('blue'), H('pink')], gap: 1.4 });
-  shelf({ face: '+z', edge: 80.4, a0: 14, a1: 36, district: 'residential', tag: 'garden_lane_n',
-    items: [H('cream'), H('sage')], gap: 1.4 });
-  shelf({ face: '+z', edge: 80.4, a0: 40, a1: 62, district: 'residential', tag: 'garden_lane_n',
-    items: [H('pink'), H('blue')], gap: 1.4 });
-  // Machiya infill fronting Harbour Avenue.
-  shelf({ face: '-x', edge: 6.6, a0: 122, a1: 140, district: 'residential', tag: 'harbor_ave_e',
-    items: [M('sand'), M('sage')], gap: 1.2 });
-  shelf({ face: '+x', edge: -6.6, a0: 122, a1: 140, district: 'residential', tag: 'harbor_ave_w',
-    items: [M('cream'), M('sand')], gap: 1.2 });
-  // Apartments at the east end of Home Lane.
-  place('apartment', 60, 93.5, 0, 'three', 'residential', 'apartments');
-  place('apartment', 60, 114.5, Math.PI, 'two', 'residential', 'apartments');
+  const HN = (wall, roof) => ({ id: 'house', v: { garden: false, wallColor: wall, roofColor: roof } });
+  const H_BLUE = HN('#dfe6ea', '#4e6a7a');
+  const H_CREAM = HN('#efe3c8', '#7a6a62');
+  const H_SAGE = HN('#e2e8d8', '#5a6672');
+  const H_PINK = HN('#f3e2dd', '#8f6a62');
+  shelf({ face: '+z', edge: 47.9, a0: -29, a1: -19.2, district: 'residential', tag: 'home_lane_n',
+    items: [H_BLUE] });
+  shelf({ face: '+z', edge: 47.9, a0: -14.1, a1: -4.3, district: 'residential', tag: 'home_lane_n',
+    items: [H_CREAM] });
+  shelf({ face: '+z', edge: 47.9, a0: 4.3, a1: 14.1, district: 'residential', tag: 'home_lane_n',
+    items: [H_SAGE] });
+  shelf({ face: '+z', edge: 47.9, a0: 26, a1: 35.8, district: 'residential', tag: 'home_lane_n',
+    items: [H_PINK] });
+  place('house', -25, 61, Math.PI, H_BLUE.v, 'residential', 'home_lane_s');
+  place('machiya', -12, 66, Math.PI, 'cream', 'residential', 'garden_row');
+  place('machiya', 20, 59.55, Math.PI, 'sand', 'residential', 'home_lane_s');
+  place('house', 32, 61, Math.PI, H_SAGE.v, 'residential', 'home_lane_s');
+  // Machiya infill fronting Harbour Avenue where it enters the suburb.
+  place('machiya', 9, 66, Math.PI, 'sand', 'residential', 'garden_row');
+  // The west lane. There used to be a third house at (-38, 34): it left the
+  // corner konbini wedged with 1.2 units either side, so it is now a garden
+  // corner instead (dressed by the green pass below) and the konbini has room.
+  place('konbini', -36, 35.2, Math.PI, null, 'residential', 'konbini');
+  place('house', -42, 46, 0, H_CREAM.v, 'residential', 'west_lane');
+  place('house', -38, 61, 0, H_PINK.v, 'residential', 'west_lane');
+  place('house', 44, 58, 0, H_BLUE.v, 'residential', 'east_lane');
 
-  // ---------------------------------------------------- NEON STREET (16) ---
-  shelf({ face: '+x', edge: 89, a0: -122, a1: -66, district: 'neon_street', tag: 'neon_w',
-    items: [{ id: 'izakaya' }, { id: 'yatai' }, { id: 'izakaya' },
-      { id: 'festivalStall', v: 'goldfish' }, { id: 'izakaya' }, { id: 'yatai' }], gap: 1.2 });
-  shelf({ face: '-x', edge: 101, a0: -104, a1: -66, district: 'neon_street', tag: 'neon_e',
-    items: [M('sand'), { id: 'izakaya' }, { id: 'festivalStall', v: 'prizes' }, { id: 'yatai' }], gap: 1.2 });
-  shelf({ face: '-x', edge: 101, a0: -140, a1: -122, district: 'neon_street', tag: 'neon_e',
-    items: [{ id: 'izakaya' }, { id: 'konbini' }], gap: 1.2 });
-  // The festival square west of the lane, and the exotics stall.
-  place('festivalStall', 112, -96.5, Math.PI, 'prizes', 'neon_street', 'neon_exotics');
-  place('yatai', 74, -126, 0, null, 'neon_street', 'festival_square');
-  place('yatai', 74, -142, Math.PI, null, 'neon_street', 'festival_square');
-  place('izakaya', 62, -134, Math.PI / 2, null, 'neon_street', 'festival_square');
+  // ---------------------------------------------------- NEON STREET (10) ---
+  // One packed lane, both kerbs shoulder to shoulder, plus a festival square
+  // on the gravel between the lane and the quay.
+  // Kiba works the west kerb between z -51 and -40, so the west row starts
+  // north of him and the festival square fills the gravel behind.
+  shelf({ face: '+x', edge: 40.2, a0: -40, a1: -30, district: 'neon_street', tag: 'neon_w',
+    items: [{ id: 'izakaya' }] });
+  place('festivalStall', 31, -28, Math.PI / 2, 'prizes', 'neon_street', 'neon_w');
+  shelf({ face: '-x', edge: 49.5, a0: -48, a1: -41, district: 'neon_street', tag: 'neon_e',
+    items: [{ id: 'izakaya' }] });
+  place('izakaya', 60.2, -36, Math.PI, null, 'neon_street', 'neon_e');
+  place('yatai', 50, -28, 0, null, 'neon_street', 'neon_e');
+  // Kiba's exotics: turned to face the lane so the customer stands on the kerb
+  // with the open street at their back. Fronting north, as it did, buried the
+  // camera in the izakaya behind it.
+  place('festivalStall', 54.5, -34.3, -Math.PI / 2, 'goldfish', 'neon_street', 'neon_exotics');
+  place('konbini', 61, -24, Math.PI, null, 'neon_street', 'neon_e');
+  place('yatai', 60, -46, 0, null, 'neon_street', 'neon_e');
+  place('yatai', 33, -45, Math.PI, null, 'neon_street', 'festival_square');
+  place('yatai', 19, -41, 0, null, 'neon_street', 'festival_square');
 
   // ------------------------------------------------- validate placements ---
   const shopRect = { x0: HOME.shop.x - 9, x1: HOME.shop.x + 9, z0: HOME.shop.z - 7, z1: HOME.shop.z + 7 };
@@ -774,56 +786,52 @@ export function createWorld(game, { gradientMap = null } = {}) {
   }
 
   // ---- street dressing along every road -----------------------------------
+  // Spacings are tuned to the compact street lengths: Market Road is 124 long,
+  // not 260, so a 46-unit lamp spacing would give three lamps for the whole
+  // town. Everything below is roughly one piece every 20-30 units per kerb.
   const LAMP = -Math.PI / 2;   // the lamp's arm points along its local +X
-  scatterAlong('market_road', 'streetLamp', { spacing: 46, offset: 1.6, yawOffset: LAMP });
-  scatterAlong('harbor_ave', 'streetLamp', { spacing: 46, offset: 1.6, yawOffset: LAMP });
-  scatterAlong('quay', 'streetLamp', { spacing: 40, offset: 1.6, yawOffset: LAMP });
-  scatterAlong('neon_lane', 'streetLamp', { spacing: 26, offset: 1.5, yawOffset: LAMP });
-  scatterAlong('neon_cross', 'streetLamp', { spacing: 40, offset: 1.5, yawOffset: LAMP });
-  scatterAlong('home_lane', 'streetLamp', { spacing: 42, offset: 1.6, yawOffset: LAMP });
-  scatterAlong('tower_row', 'streetLamp', { spacing: 34, offset: 1.6, yawOffset: LAMP });
-  scatterAlong('lane_west', 'streetLamp', { spacing: 54, offset: 1.2, yawOffset: LAMP, scale: 0.85 });
-  scatterAlong('lane_mid', 'streetLamp', { spacing: 54, offset: 1.2, yawOffset: LAMP, scale: 0.85 });
+  scatterAlong('market_road', 'streetLamp', { spacing: 28, offset: 1.6, yawOffset: LAMP });
+  scatterAlong('harbor_ave', 'streetLamp', { spacing: 30, offset: 1.6, yawOffset: LAMP });
+  scatterAlong('quay', 'streetLamp', { spacing: 24, offset: 1.5, yawOffset: LAMP });
+  scatterAlong('neon_lane', 'streetLamp', { spacing: 13, offset: 1.4, yawOffset: LAMP });
+  scatterAlong('neon_cross', 'streetLamp', { spacing: 24, offset: 1.5, yawOffset: LAMP });
+  scatterAlong('home_lane', 'streetLamp', { spacing: 24, offset: 1.5, yawOffset: LAMP });
+  scatterAlong('tower_row', 'streetLamp', { spacing: 20, offset: 1.5, yawOffset: LAMP });
 
-  scatterAlong('market_road', 'utilityPole', { spacing: 58, offset: 2.6, phase: 0.2 });
-  scatterAlong('harbor_ave', 'utilityPole', { spacing: 58, offset: 2.6, phase: 0.35 });
-  scatterAlong('home_lane', 'utilityPole', { spacing: 48, offset: 2.6, phase: 0.15, sides: [1] });
-  scatterAlong('neon_lane', 'utilityPole', { spacing: 40, offset: 2.4, phase: 0.7, sides: [1] });
-  scatterAlong('quay', 'utilityPole', { spacing: 50, offset: 2.4, phase: 0.6, sides: [1] });
+  scatterAlong('market_road', 'utilityPole', { spacing: 34, offset: 2.4, phase: 0.2 });
+  scatterAlong('harbor_ave', 'utilityPole', { spacing: 38, offset: 2.4, phase: 0.35, sides: [1] });
+  scatterAlong('home_lane', 'utilityPole', { spacing: 30, offset: 2.4, phase: 0.15, sides: [1] });
+  scatterAlong('neon_lane', 'utilityPole', { spacing: 20, offset: 2.2, phase: 0.7, sides: [1] });
+  scatterAlong('quay', 'utilityPole', { spacing: 30, offset: 2.2, phase: 0.6, sides: [1] });
 
-  scatterAlong('market_road', 'planterBox', { spacing: 44, offset: 1.4, phase: 0.75 });
-  scatterAlong('tower_row', 'planterBox', { spacing: 26, offset: 1.4, phase: 0.3 });
-  scatterAlong('home_lane', 'hedge', { spacing: 32, offset: 2.2, phase: 0.6, districts: ['residential'] });
-  scatterAlong('garden_lane', 'hedge', { spacing: 30, offset: 1.6, phase: 0.4, districts: ['residential'] });
-  scatterAlong('home_lane', 'bicycle', { spacing: 34, offset: 2.4, phase: 0.25, districts: ['residential'] });
-  scatterAlong('garden_lane', 'bicycle', { spacing: 32, offset: 1.5, phase: 0.8, districts: ['residential'] });
-  scatterAlong('home_lane', 'mailbox', { spacing: 44, offset: 1.5, phase: 0.9, districts: ['residential'] });
-  scatterAlong('home_lane', 'cherryTree', { spacing: 44, offset: 3.4, phase: 0.45, districts: ['residential'] });
-  scatterAlong('garden_lane', 'cherryTree', { spacing: 50, offset: 3.0, phase: 0.2, districts: ['residential'] });
-  scatterAlong('market_road', 'cherryTree', { spacing: 58, offset: 3.4, phase: 0.35, districts: ['old_market'] });
-  scatterAlong('tower_row', 'cherryTree', { spacing: 44, offset: 3.2, phase: 0.65, districts: ['downtown'] });
-  scatterAlong('canal_walk', 'cherryTree', { spacing: 22, offset: 1.4, phase: 0.5, jitter: 0.3 });
-  scatterAlong('lane_west', 'pottedPlant', { spacing: 20, offset: 0.9, jitter: 0.35 });
-  scatterAlong('lane_mid', 'pottedPlant', { spacing: 20, offset: 0.9, jitter: 0.35 });
-  scatterAlong('lane_east', 'pottedPlant', { spacing: 18, offset: 0.9, jitter: 0.35 });
-  scatterAlong('lane_upper', 'bonsai', { spacing: 26, offset: 0.9, jitter: 0.3 });
-  scatterAlong('lane_lower', 'bonsai', { spacing: 26, offset: 0.9, jitter: 0.3 });
-  scatterAlong('market_road', 'benchWood', { spacing: 80, offset: 1.6, phase: 0.5 });
-  scatterAlong('tower_row', 'benchWood', { spacing: 46, offset: 1.6, phase: 0.85 });
-  scatterAlong('quay', 'benchWood', { spacing: 54, offset: 1.6, phase: 0.4 });
-  scatterAlong('market_road', 'trashBins', { spacing: 74, offset: 1.5, phase: 0.15 });
-  scatterAlong('neon_lane', 'trashBins', { spacing: 46, offset: 1.4, phase: 0.55 });
-  scatterAlong('tower_row', 'vendingMachine', { spacing: 40, offset: 1.5, phase: 0.6 });
-  scatterAlong('neon_lane', 'vendingMachine', { spacing: 34, offset: 1.4, phase: 0.3 });
-  scatterAlong('home_lane', 'vendingMachine', { spacing: 60, offset: 1.5, phase: 0.7, sides: [-1] });
-  scatterAlong('tower_row', 'bicycleRack', { spacing: 44, offset: 1.8, phase: 0.4 });
-  scatterAlong('quay', 'trafficCone', { spacing: 36, offset: 1.3, phase: 0.2, jitter: 1.2 });
+  scatterAlong('market_road', 'planterBox', { spacing: 30, offset: 1.4, phase: 0.75 });
+  scatterAlong('tower_row', 'planterBox', { spacing: 18, offset: 1.4, phase: 0.3 });
+  scatterAlong('home_lane', 'hedge', { spacing: 18, offset: 2.0, phase: 0.6, districts: ['residential'] });
+  scatterAlong('home_lane', 'bicycle', { spacing: 20, offset: 2.2, phase: 0.25, districts: ['residential'] });
+  scatterAlong('home_lane', 'mailbox', { spacing: 22, offset: 1.5, phase: 0.9, districts: ['residential'] });
+  scatterAlong('home_lane', 'cherryTree', { spacing: 22, offset: 3.2, phase: 0.45, districts: ['residential'] });
+  scatterAlong('market_road', 'cherryTree', { spacing: 34, offset: 3.2, phase: 0.35, districts: ['old_market'] });
+  scatterAlong('tower_row', 'cherryTree', { spacing: 24, offset: 3.0, phase: 0.65, districts: ['downtown'] });
+  scatterAlong('canal_walk', 'cherryTree', { spacing: 9, offset: 1.3, phase: 0.5, jitter: 0.3, sides: [1] });
+  scatterAlong('lane_back', 'pottedPlant', { spacing: 9, offset: 0.9, jitter: 0.3 });
+  scatterAlong('lane_market', 'pottedPlant', { spacing: 8, offset: 0.9, jitter: 0.3 });
+  scatterAlong('lane_shrine', 'bonsai', { spacing: 6, offset: 0.9, jitter: 0.25 });
+  scatterAlong('market_road', 'benchWood', { spacing: 44, offset: 1.5, phase: 0.5 });
+  scatterAlong('tower_row', 'benchWood', { spacing: 26, offset: 1.5, phase: 0.85 });
+  scatterAlong('quay', 'benchWood', { spacing: 30, offset: 1.5, phase: 0.4, sides: [1] });
+  scatterAlong('market_road', 'trashBins', { spacing: 46, offset: 1.5, phase: 0.15 });
+  scatterAlong('neon_lane', 'trashBins', { spacing: 22, offset: 1.4, phase: 0.55 });
+  scatterAlong('tower_row', 'vendingMachine', { spacing: 24, offset: 1.5, phase: 0.6 });
+  scatterAlong('neon_lane', 'vendingMachine', { spacing: 18, offset: 1.4, phase: 0.3 });
+  scatterAlong('home_lane', 'vendingMachine', { spacing: 34, offset: 1.5, phase: 0.7, sides: [-1] });
+  scatterAlong('tower_row', 'bicycleRack', { spacing: 26, offset: 1.7, phase: 0.4, sides: [1] });
+  scatterAlong('quay', 'trafficCone', { spacing: 22, offset: 1.3, phase: 0.2, jitter: 1.0, sides: [1] });
 
   // Ground decals — lifted above the road surface so they read.
-  scatterAlong('market_road', 'manholeCover', { spacing: 52, offset: -2.6, phase: 0.3, y: 0.1, jitter: 0.4 });
-  scatterAlong('harbor_ave', 'manholeCover', { spacing: 58, offset: -2.6, phase: 0.6, y: 0.1, jitter: 0.4, sides: [1] });
-  scatterAlong('market_road', 'gutterGrate', { spacing: 40, offset: 0.2, phase: 0.8, y: 0.1, jitter: 0.2 });
-  scatterAlong('home_lane', 'gutterGrate', { spacing: 36, offset: 0.2, phase: 0.4, y: 0.1, jitter: 0.2 });
+  scatterAlong('market_road', 'manholeCover', { spacing: 34, offset: -2.2, phase: 0.3, y: 0.1, jitter: 0.4 });
+  scatterAlong('harbor_ave', 'manholeCover', { spacing: 38, offset: -2.2, phase: 0.6, y: 0.1, jitter: 0.4, sides: [1] });
+  scatterAlong('market_road', 'gutterGrate', { spacing: 28, offset: 0.2, phase: 0.8, y: 0.1, jitter: 0.2 });
+  scatterAlong('home_lane', 'gutterGrate', { spacing: 26, offset: 0.2, phase: 0.4, y: 0.1, jitter: 0.2 });
 
   // Zebra crossings on every approach to every road intersection.
   for (const it of intersections) {
@@ -832,7 +840,7 @@ export function createWorld(game, { gradientMap = null } = {}) {
       const halfLong = (alongX ? r.w : r.d) / 2;
       const other = r === it.a ? it.b : it.a;
       const halfOther = (alongX ? other.d : other.w) / 2;
-      const back = halfOther + 3.2;
+      const back = halfOther + 2.6;
       for (const s of [-1, 1]) {
         const cx = alongX ? it.x + s * back : it.x;
         const cz = alongX ? it.z : it.z + s * back;
@@ -847,218 +855,242 @@ export function createWorld(game, { gradientMap = null } = {}) {
   const sway = [];
   const gulls = [];
 
-  // Old Market: the shrine precinct at the head of Shrine Walk (z 32 → 56).
-  prop('torii', -110, 36, 0, { scale: 1.6 });
-  prop('torii', -110, 43, 0, { scale: 1.25 });
-  prop('shrineOffering', -110, 54, Math.PI);
-  prop('komaInu', -113.4, 51, Math.PI, { scale: 1.3 });
-  prop('komaInu', -106.6, 51, Math.PI, { scale: 1.3 });
-  for (let i = 0; i < 4; i++) {
-    prop('stoneLantern', -113.4, 39 + i * 4.2, 0);
-    prop('stoneLantern', -106.6, 39 + i * 4.2, 0);
+  // Old Market: the shrine precinct at the foot of Shrine Walk. The three
+  // foraging beds at (-53,4), (-50,8.5) and (-47,11.9) are the reason the yard
+  // is open ground — nothing here may sit on top of them.
+  prop('torii', -51, 5.5, 0, { scale: 1.4 });
+  prop('torii', -51, 10.5, 0, { scale: 1.15 });
+  prop('shrineOffering', -51, 16.5, Math.PI);
+  prop('komaInu', -53.6, 14.4, Math.PI, { scale: 1.2 });
+  prop('komaInu', -48.4, 14.4, Math.PI, { scale: 1.2 });
+  for (const [lx, lz] of [[-53.8, 7.6], [-48.2, 7.6], [-53.8, 12.2], [-48.2, 12.2]]) {
+    prop('stoneLantern', lx, lz, 0);
   }
-  prop('pineTree', -118, 52, 0, { scale: 1.3 });
-  prop('pineTree', -102, 53, 0, { scale: 1.15 });
-  prop('pineTree', -117, 40, 0);
-  prop('cherryTree', -102, 40, 0, { scale: 1.2 });
+  prop('pineTree', -56.5, 13.5, 0, { scale: 1.25 });
+  prop('pineTree', -45.5, 6.6, 0);
+  prop('cherryTree', -47.5, 17.8, 0, { scale: 1.15 });
 
-  // Market banners down the alley edges + lantern strings strung across them.
-  for (let i = 0; i < 6; i++) {
-    sway.push(prop('nobori', -96.8, -12 + i * 9, Math.PI / 2));
-    sway.push(prop('nobori', -73.2, -12 + i * 9, -Math.PI / 2));
+  // Lantern Alley: banners down both kerbs and strings strung across it.
+  for (let i = 0; i < 3; i++) {
+    sway.push(prop('nobori', -33.9, 8 + i * 6, Math.PI / 2));
+    sway.push(prop('nobori', -29.1, 11 + i * 6, -Math.PI / 2));
   }
-  for (let i = 0; i < 4; i++) {
-    prop('lanternString', -100, -8 + i * 14, 0, { scale: 0.85 });
-    prop('lanternString', -70, -8 + i * 14, 0, { scale: 0.85 });
+  for (const lz of [9, 16, 23]) prop('lanternString', -31.5, lz, Math.PI / 2, { scale: 0.62 });
+  // Noren hung 0.15 proud of the actual machiya facades.
+  for (const [nx, nz, ny] of [[-33.3, -4.15, 0], [-8.55, -4.15, 0],
+    [-50, -11.05, 0], [-41.5, -11.05, 0], [-40, 4.15, Math.PI]]) {
+    sway.push(prop('noren', nx, nz, ny));
   }
-  // Noren hung on the actual shopfronts (0.15 proud of each facade).
-  for (const nx of [-116.55, -107.45, -92.15, -83.85, -61.55]) {
-    sway.push(prop('noren', nx, -7.35, 0));
-  }
-  for (const nx of [-107.85, -78.65]) sway.push(prop('noren', nx, 7.35, Math.PI));
-  for (const nx of [-116.55, -92.15, -61.55]) sway.push(prop('noren', nx, -26.95, 0));
-  // Stall square dressing.
-  for (const [sx, sz] of [[-66.5, 15], [-55, 16.4], [-47, 15.2], [-62, 6.6]]) {
+  // Market square dressing.
+  for (const [sx, sz] of [[-30.5, 9.5], [-24.5, 15.5], [-38.5, 17.5], [-33, 3.2]]) {
     prop('fruitCrate', sx, sz, rng() * Math.PI * 2);
   }
-  prop('sakeBarrelStack', -56, 7, Math.PI);
-  prop('sakeBarrelStack', -90, 19.6, 0);
-  prop('woodenStall', -47.5, -14, Math.PI / 2);
-  prop('woodenStall', -47.5, -20, Math.PI / 2);
-  prop('ramenBowlSign', -83.85, -7.4, 0);
-  prop('signPost', -30.5, 6.4, 0);
-  prop('signPost', -7.8, 7.2, 0);
+  // Barrels and the west stall are 4+ units apart: they used to leave a
+  // 1.7-unit slot between them at the mouth of the square.
+  prop('sakeBarrelStack', -46.6, 13.5, Math.PI / 2);
+  prop('woodenStall', -44.5, 13.5, Math.PI / 2);
+  prop('ramenBowlSign', -33.3, -4.4, 0);
+  prop('signPost', -14.5, 6.2, 0.2);
+  prop('signPost', 6.5, -6.4, -0.3);
 
   // ---- THE HOME PLAZA -----------------------------------------------------
-  // The first thing every player sees. Two corridors are kept deliberately
-  // empty and everything below is placed around them:
-  //   · the walking line from HOME.spawn (-28, 28) to the shop door (-28, 22.5)
-  //     — nothing within 1.6 units of x = -28 between z = 21 and z = 31;
-  //   · the delivery board at (-20, 24), which needs its 2.6-unit reach clear.
-  // Blossom at the corners of the square.
-  prop('cherryTree', -37.6, 25.5, 0.4, { scale: 1.25 });
-  prop('cherryTree', -16.6, 25.5, -0.5, { scale: 1.1 });
-  prop('cherryTree', -37.6, 41.0, 1.1, { scale: 1.15 });
-  // A clipped hedge line frames the south side, split on the shop's axis so
-  // the player can always walk straight out of the square.
-  for (const hx of [-36.6, -33.4, -30.2, -23.8, -20.6, -17.4]) prop('hedge', hx, 43.4, 0);
-  // A shorter run frames the east flank beside the shop.
-  prop('hedge', -15.6, 13.5, Math.PI / 2);
-  prop('hedge', -15.6, 16.7, Math.PI / 2);
-  // Planters either side of the approach to the door, and one at the west gate.
-  prop('planterBox', -32.6, 24.4, 0);
-  prop('planterBox', -23.4, 24.4, 0);
-  prop('planterBox', -38.6, 24.5, Math.PI / 2);
-  // Pots against the shopfront and along the stall row.
-  prop('pottedPlant', -30.4, 23.3, 0);
-  prop('pottedPlant', -25.6, 23.3, 0);
-  prop('pottedPlant', -17.6, 9.6, 0);
-  prop('pottedPlant', -19.2, 11.5, 0);
-  prop('pottedPlant', -34.6, 37.0, 0);
-  // A noren-hung side stall on the west edge, with its crates.
-  prop('woodenStall', -36.8, 33.5, Math.PI / 2);
-  sway.push(prop('noren', -35.5, 33.5, Math.PI / 2));
-  prop('fruitCrate', -36.8, 30.6, 0.4);
-  prop('fruitCrate', -36.2, 36.4, -0.3);
-  // Benches looking back at the shop.
-  prop('benchWood', -33.0, 41.0, Math.PI);
-  prop('benchWood', -21.0, 41.0, Math.PI);
-  prop('benchWood', -36.2, 28.5, Math.PI / 2);
-  prop('benchWood', -18.2, 30.5, -Math.PI / 2);
-  // Paper lanterns on posts at the four corners of the open square.
-  prop('lanternPost', -35.5, 29.5, Math.PI / 2);
-  prop('lanternPost', -19.5, 29.5, -Math.PI / 2);
-  prop('lanternPost', -35.5, 38.5, Math.PI / 2);
-  prop('lanternPost', -19.5, 38.5, -Math.PI / 2);
-  // Lantern strings overhead, in two runs across the square. The runs are set
-  // out so no post lands in the spawn → door corridor and no two posts end up
-  // close enough to read as one fat pole.
-  for (const lx of [-35.5, -20.0]) prop('lanternString', lx, 32.0, 0, { scale: 1.05 });
-  for (const lx of [-35.5, -27.75, -20.0]) prop('lanternString', lx, 39.8, 0, { scale: 1.05 });
-  // A signpost at the Lantern Alley gate, bins and bikes on the east side.
-  prop('signPost', -38.4, 27.5, 0.3);
-  prop('trashBins', -16.8, 35.5, -Math.PI / 2);
-  prop('bicycleRack', -17.0, 20.0, -Math.PI / 2);
-  prop('bicycle', -17.6, 19.4, -Math.PI / 2 + 0.15);
-  prop('bicycle', -17.6, 20.8, -Math.PI / 2 - 0.12);
-
-  // Harbour: crates, pilings, ropes, boats, gulls.
-  for (let i = 0; i < 9; i++) {
-    const x = -76 + i * 12 + (rng() - 0.5) * 2;
-    prop('fishCrate', x, -130.5 + (rng() - 0.5) * 1.4, rng() * 0.5 - 0.25);
-    if (i % 2 === 0) prop('fishCrate', x + 1.1, -129.4, rng() * 0.5);
+  // The first thing every player sees: a 17 x 30 paved square wrapped by Market
+  // Road, Harbour Avenue and two building rows. It is dressed down BOTH FLANKS
+  // and left open down the middle, because three things run through the middle:
+  //   · the walk from HOME.spawn (-12, 19) to the shop door (-12, 15);
+  //   · HOME.board at (-5, 17), which needs its 2.6-unit reach clear;
+  //   · CAM_KEEP — the chase camera hangs over (-12, 28) on a new game.
+  // Everything with a collider taller than CAM_LOW therefore lives at x <= -19
+  // or x >= -6.1; the middle carries only planters, potted plants, flat paving
+  // and the overhead lantern runs (which have no collider at all). `plazaProp`
+  // enforces that, so a careless edit fails the build loudly instead of quietly
+  // parking a wall in front of the opening shot.
+  // Footprints of the props that carry a collider, at yaw 0, taken from
+  // props.js. Only the ones the plaza uses need to be here.
+  const PROP_FOOT = {
+    hedge: { w: 3.1, d: 0.7, h: 0.85 }, benchWood: { w: 1.8, d: 0.56, h: 0.95 },
+    cherryTree: { w: 0.7, d: 0.7, h: 2.0 }, pineTree: { w: 0.75, d: 0.75, h: 2.8 },
+    woodenStall: { w: 3.6, d: 2.2, h: 2.5 }, lanternPost: { w: 0.42, d: 0.42, h: 2.5 },
+    signPost: { w: 0.34, d: 0.34, h: 2.5 }, trashBins: { w: 1.92, d: 0.59, h: 0.82 },
+    bicycleRack: { w: 1.9, d: 0.3, h: 0.7 }, bicycle: { w: 0.5, d: 1.7, h: 1.0 },
+    vendingMachine: { w: 0.7, d: 1.0, h: 1.9 }, stoneLantern: { w: 0.8, d: 0.8, h: 1.6 },
+    sakeBarrelStack: { w: 1.98, d: 0.72, h: 1.32 }, stoneWall: { w: 3.4, d: 0.64, h: 0.68 },
+    planterBox: { w: 1.6, d: 0.6, h: 0.5 }, pottedPlant: { w: 0.57, d: 0.57, h: 0.5 },
+    fruitCrate: { w: 0.8, d: 0.6, h: 0.44 },
+  };
+  /**
+   * Place a plaza prop, refusing anything over CAM_LOW that lands in the
+   * camera's keep-out disc or the spawn lane. Anything flat or knee-high (and
+   * anything with no collider at all — lantern strings, noren, paper lanterns)
+   * goes through untouched: those are the things that dress the middle.
+   */
+  function plazaProp(id, x, z, yaw = 0, extra) {
+    const f = PROP_FOOT[id];
+    if (f && f.h > CAM_LOW) {
+      const horiz = Math.abs(Math.sin(yaw)) > 0.5;
+      const hx = (horiz ? f.d : f.w) / 2;
+      const hz = (horiz ? f.w : f.d) / 2;
+      const dx = Math.max(0, Math.abs(x - CAM_KEEP.x) - hx);
+      const dz = Math.max(0, Math.abs(z - CAM_KEEP.z) - hz);
+      const why = Math.hypot(dx, dz) < CAM_KEEP.r ? 'inside the camera keep-out'
+        : (x + hx > CAM_LANE.x0 && x - hx < CAM_LANE.x1
+          && z + hz > CAM_LANE.z0 && z - hz < CAM_LANE.z1) ? 'inside the camera lane' : null;
+      if (why) { rejects.push({ id, x, z, district: 'old_market', tag: 'plaza', why }); return null; }
+    }
+    return prop(id, x, z, yaw, extra);
   }
-  // Barrels tucked into the gaps between the dock sheds.
-  for (const bx of [-58, -24, 20, 48]) {
-    prop('barrel', bx, -132, 0);
-    prop('barrel', bx + 0.9, -133.1, 0);
+
+  // -- west flank ------------------------------------------------------------
+  // North of z = 19 the flank is wide (the machiya behind it starts at z=17.9),
+  // so it carries the solid furniture: the hedge line, the bike rack and the
+  // noren-hung side stall. South of that the walkway between the machiya and
+  // the square is only ~3 units, so it carries point obstacles only — trees,
+  // benches and lantern posts, which you walk around rather than along.
+  plazaProp('hedge', -19.8, 6.5, Math.PI / 2);
+  plazaProp('hedge', -19.8, 9.0, Math.PI / 2);
+  plazaProp('bicycleRack', -19.0, 11.8, -Math.PI / 2);
+  plazaProp('bicycle', -18.1, 11.2, -Math.PI / 2);
+  plazaProp('bicycle', -18.1, 12.5, -Math.PI / 2);
+  plazaProp('woodenStall', -18.8, 15.6, Math.PI / 2);
+  sway.push(prop('noren', -17.6, 15.6, Math.PI / 2));
+  plazaProp('fruitCrate', -17.3, 17.9, 0.4);
+  plazaProp('benchWood', -19.6, 20.6, Math.PI / 2);
+  plazaProp('cherryTree', -19.8, 23.8, 0.4, { scale: 1.2 });
+  plazaProp('cherryTree', -19.8, 27.4, -0.3, { scale: 1.1 });
+  plazaProp('benchWood', -19.6, 30.6, Math.PI / 2);
+  plazaProp('lanternPost', -19.9, 33.6, Math.PI / 2);
+
+  // -- east flank: the job-board side, kept walkable around HOME.board -------
+  plazaProp('cherryTree', -6.6, 14.2, -0.5, { scale: 1.1 });
+  plazaProp('lanternPost', -6.1, 8.6, -Math.PI / 2);
+  plazaProp('benchWood', -7.0, 20.6, Math.PI);
+  plazaProp('signPost', -6.2, 23.4, 0.3);
+  plazaProp('pottedPlant', -6.4, 27.4, 0);
+  plazaProp('lanternPost', -5.8, 32.6, -Math.PI / 2);
+
+  // -- south edge: an avenue of cherry trees closing the square, far enough
+  //    back (z >= 35.4) to stay clear of the camera disc, and all point
+  //    obstacles so the walk through to Home Lane never narrows.
+  plazaProp('cherryTree', -18.4, 35.8, 0.2, { scale: 1.15 });
+  plazaProp('cherryTree', -13.0, 36.4, -0.4, { scale: 1.25 });
+  plazaProp('cherryTree', -7.6, 35.8, 0.6, { scale: 1.1 });
+  plazaProp('lanternPost', -15.8, 36.6, 0);
+  plazaProp('lanternPost', -10.2, 36.6, 0);
+  plazaProp('pottedPlant', -16.9, 33.4, 0);
+  plazaProp('pottedPlant', -7.1, 33.4, 0);
+
+  // -- the middle: only knee-high planting, and lanterns strung overhead -----
+  plazaProp('planterBox', -15.6, 17.6, 0);
+  plazaProp('planterBox', -8.4, 17.6, 0);
+  plazaProp('pottedPlant', -14.4, 20.4, 0);
+  plazaProp('pottedPlant', -9.6, 20.4, 0);
+  plazaProp('planterBox', -15.8, 26.6, 0);
+  plazaProp('planterBox', -8.2, 26.6, 0);
+  plazaProp('pottedPlant', -13.4, 31.4, 0);
+  plazaProp('pottedPlant', -10.6, 31.4, 0);
+  // Lantern strings and paper lanterns: no colliders, so they dress the middle
+  // and the camera flies straight under them.
+  for (const lz of [20.4, 25.2, 30.0]) prop('lanternString', -12, lz, 0, { scale: 1.05 });
+  for (const [px, pz] of [[-16.6, 23.6], [-7.4, 29.2], [-17.0, 30.6]]) prop('paperLantern', px, pz, 0);
+
+  // ---- Fish Harbour: crates, pilings, ropes, boats, gulls ------------------
+  for (let i = 0; i < 7; i++) {
+    const x = -26 + i * 8 + (rng() - 0.5) * 1.6;
+    prop('fishCrate', x, -51.4 + (rng() - 0.5) * 1.2, rng() * 0.5 - 0.25);
+    if (i % 2 === 0) prop('fishCrate', x + 1.1, -50.4, rng() * 0.5);
+  }
+  for (const bx of [-27, 4, 21]) {
+    prop('barrel', bx, -51.6, 0);
+    prop('barrel', bx + 0.9, -50.6, 0);
   }
   for (const p of PIERS) {
     for (const sx of [-1, 1]) {
       for (let i = 0; i < 2; i++) {
-        prop('dockPiling', p.x + sx * (p.w / 2 + 0.9), p.z0 + 2.5 + i * (p.z1 - p.z0 - 5), 0, { y: -0.3 });
+        prop('dockPiling', p.x + sx * (p.w / 2 + 0.8), p.z0 + 1.6 + i * (p.z1 - p.z0 - 3.4), 0, { y: -0.3 });
       }
     }
-    prop('mooringRope', p.x + p.w / 2 - 0.4, p.z0 + 4.5, Math.PI / 2, { y: DECK_Y });
-    prop('mooringRope', p.x - p.w / 2 + 0.4, p.z1 - 3.5, -Math.PI / 2, { y: DECK_Y });
-    prop('fishCrate', p.x, p.z1 - 2.2, 0.3, { y: DECK_Y });
-    prop('fishCrate', p.x - 0.9, p.z1 - 3.4, -0.2, { y: DECK_Y });
+    prop('mooringRope', p.x + p.w / 2 - 0.4, p.z0 + 2.6, Math.PI / 2, { y: DECK_Y });
+    prop('fishCrate', p.x, p.z1 - 1.6, 0.3, { y: DECK_Y });
+    prop('fishCrate', p.x - 0.9, p.z1 - 2.8, -0.2, { y: DECK_Y });
   }
-  const boats = [
-    [-66, -144, 0.12], [-54, -146, -0.08], [-27, -145, 0.05],
-    [-13, -147, -0.14], [26, -144, 0.1], [33, -148, -0.06],
-  ];
-  for (const [bx, bz, byaw] of boats) prop('fishingBoat', bx, bz, byaw, { y: -0.34 });
-  for (let i = 0; i < 6; i++) {
-    gulls.push(prop('seagull', -60 + i * 22, -142 - rng() * 8, rng() * Math.PI * 2, { y: 3.2 + rng() * 3 }));
+  for (const [bx, bz, byaw] of [[-19, -65, 0.12], [-2.5, -71.5, -0.08], [9, -66, 0.05], [21, -68, -0.14]]) {
+    prop('fishingBoat', bx, bz, byaw, { y: -0.34 });
   }
-  prop('seagull', -40, -128.5, 1.2, { y: 0 });
-  prop('seagull', 14, -130.2, -0.7, { y: 0 });
-  for (const nx of [-68, -50, -30, -12, 12, 30]) sway.push(prop('nobori', nx, -116.4, Math.PI));
-  prop('pineTree', -80, -100, 0, { scale: 1.2 });
-  prop('pineTree', -74, -92, 0);
-  prop('pineTree', 46, -96, 0, { scale: 1.15 });
-
-  // Downtown: canal, station forecourt, office frontages.
   for (let i = 0; i < 4; i++) {
-    prop('benchWood', 109.6, 48 + i * 6.5, -Math.PI / 2);
+    gulls.push(prop('seagull', -18 + i * 13, -66 - rng() * 5, rng() * Math.PI * 2, { y: 3.0 + rng() * 2.5 }));
   }
-  prop('signPost', 97.4, 8, 0);
-  prop('signPost', 84.2, -6.6, 0);
-  for (const [vx, vz] of [[57, -6.4], [70, -6.4], [97.3, 30], [114.6, 61]]) prop('vendingMachine', vx, vz, Math.PI);
-  for (let i = 0; i < 3; i++) prop('acUnit', 86.5, -23 + i * 3.5, Math.PI / 2);
-  prop('acUnit', 101.5, -20, -Math.PI / 2);
-  prop('bicycleRack', 60, -6.5, Math.PI);
-  for (let i = 0; i < 5; i++) prop('bicycle', 57.6 + i * 1.4, -6.6, Math.PI + (rng() - 0.5) * 0.2);
-  prop('planterBox', 52, -6.5, Math.PI);
-  prop('planterBox', 76, -6.5, Math.PI);
+  prop('seagull', -24, -51.5, 1.2, { y: 0 });
+  prop('seagull', 12, -51.6, -0.7, { y: 0 });
+  for (const nx of [-24, -12, 6, 20]) sway.push(prop('nobori', nx, -51.8, Math.PI));
+  prop('pineTree', -30, -24, 0, { scale: 1.15 });
+  prop('pineTree', 6, -24, 0);
+  prop('signPost', 5.5, -22, 0.2);
 
-  // Residential: gardens, bikes, hedges, mailboxes, kids' clutter.
-  for (let i = 0; i < 9; i++) {
-    const x = -48 + i * 12;
-    if (Math.abs(x) < 8) continue;
-    prop('hedge', x, 87.8, 0, { scale: 1.1 });
-    prop('mailbox', x + 4.4, 98.7, Math.PI);
-  }
-  for (const cx of [-44, -26, -17, 26, 35, 46]) prop('cherryTree', cx, 128, 0, { scale: 1.05 + rng() * 0.2 });
-  for (let i = 0; i < 6; i++) prop('bicycle', -40 + i * 16, 109.4, Math.PI + (rng() - 0.5) * 0.4);
-  prop('benchWood', -20, 76, Math.PI);
-  prop('benchWood', -14, 76, Math.PI);
-  prop('pottedPlant', -27.5, 79.6, 0);
-  prop('pottedPlant', -20.5, 79.6, 0);
-  prop('bonsai', 14, 90, 0);
-  prop('kotatsu', -30, 68, 0);
-  for (let i = 0; i < 4; i++) prop('pineTree', -44 + i * 26, 70, 0, { scale: 1.1 });
-  for (let i = 0; i < 5; i++) prop('hedge', 66 + i * 6, 100, Math.PI / 2, { scale: 1.2 });
+  // ---- Downtown: canal walk, station forecourt, office frontages -----------
+  for (let i = 0; i < 3; i++) prop('benchWood', 52.2, 28 + i * 5, -Math.PI / 2);
+  prop('signPost', 35, 5.5, 0);
+  for (const [vx, vz] of [[19, 12], [44.6, 3], [53.4, 24]]) prop('vendingMachine', vx, vz, Math.PI);
+  for (let i = 0; i < 3; i++) prop('acUnit', 44.1, -14 + i * 3.2, -Math.PI / 2);
+  prop('bicycleRack', 27, 13.5, 0);
+  for (let i = 0; i < 4; i++) prop('bicycle', 25.4 + i * 1.4, 13.4, (rng() - 0.5) * 0.2);
+  prop('planterBox', 20, 13.6, 0);
+  prop('planterBox', 34, 13.6, 0);
 
-  // Neon Food Street: lantern strings the whole length, noren, barrels, signs.
-  for (let i = 0; i < 10; i++) {
-    prop('lanternString', 95, -136 + i * 7.6, 0, { scale: 1.25, y: 0 });
-  }
+  // ---- Residential: gardens, bikes, hedges, mailboxes ---------------------
   for (let i = 0; i < 6; i++) {
-    sway.push(prop('noren', 89.3, -118 + i * 9, Math.PI / 2));
-    sway.push(prop('noren', 100.7, -110 + i * 9, -Math.PI / 2));
+    const x = -26 + i * 11;
+    if (Math.abs(x) < 6) continue;
+    prop('hedge', x, 37.2, 0, { scale: 1.05 });
   }
-  for (let i = 0; i < 5; i++) sway.push(prop('nobori', 89.9, -122 + i * 11, Math.PI / 2));
-  for (let i = 0; i < 4; i++) prop('ramenBowlSign', 100.6, -128 + i * 13, -Math.PI / 2);
-  for (let i = 0; i < 4; i++) prop('sakeBarrelStack', 89.9, -132 + i * 12, Math.PI / 2);
-  for (let i = 0; i < 6; i++) prop('paperLantern', 90.2 + (i % 2) * 9.6, -140 + i * 5, 0);
-  // Festival square.
-  for (let i = 0; i < 4; i++) prop('lanternString', 74, -140 + i * 5, Math.PI / 2, { scale: 1.1 });
-  prop('woodenStall', 68, -130, Math.PI / 2);
-  prop('woodenStall', 80, -130, -Math.PI / 2);
-  for (let i = 0; i < 4; i++) prop('barrel', 70 + i * 3, -138, 0);
-  prop('signPost', 101.6, -66.5, 0);
-  prop('signPost', 85.6, -52.8, 0);
+  for (const cx of [-30, -18, 4, 24]) prop('cherryTree', cx, 68, 0, { scale: 1.05 + rng() * 0.2 });
+  for (let i = 0; i < 4; i++) prop('bicycle', -22 + i * 13, 56.6, Math.PI + (rng() - 0.5) * 0.4);
+  prop('benchWood', -4, 42, Math.PI);
+  prop('benchWood', 2, 42, Math.PI);
+  prop('pottedPlant', -6.5, 44.4, 0);
+  prop('bonsai', 6, 44, 0);
+  prop('kotatsu', -33, 52, 0);
+  for (let i = 0; i < 3; i++) prop('pineTree', -34 + i * 12, 70, 0, { scale: 1.1 });
+
+  // ---- Neon Food Street: lantern strings, noren, barrels, signs -----------
+  for (let i = 0; i < 6; i++) prop('lanternString', 44, -56 + i * 6.4, 0, { scale: 1.2, y: 0 });
+  for (let i = 0; i < 3; i++) {
+    sway.push(prop('noren', 40.35, -38 + i * 5, Math.PI / 2));
+    sway.push(prop('noren', 49.35, -46 + i * 5, -Math.PI / 2));
+  }
+  for (let i = 0; i < 3; i++) sway.push(prop('nobori', 40.9, -50 + i * 7, Math.PI / 2));
+  for (let i = 0; i < 2; i++) prop('ramenBowlSign', 49.4, -44 + i * 6, -Math.PI / 2);
+  for (let i = 0; i < 2; i++) prop('sakeBarrelStack', 40.9, -35 + i * 7, Math.PI / 2);
+  for (let i = 0; i < 4; i++) prop('paperLantern', 41.2 + (i % 2) * 6, -52 + i * 4, 0);
+  // Festival square, on the gravel between the lane and the quay.
+  for (let i = 0; i < 3; i++) prop('lanternString', 33, -52 + i * 4, Math.PI / 2, { scale: 1.0 });
+  prop('woodenStall', 28, -50, Math.PI / 2);
+  for (let i = 0; i < 3; i++) prop('barrel', 30 + i * 2.4, -54, 0);
+  prop('signPost', 45.5, -20, 0);
 
   // Gap-filler greenery so no zone butts onto bare ground.
   const GREEN_BANDS = [
-    { x0: -30, x1: 14, z0: -70, z1: -50, n: 8, ids: ['pineTree', 'hedge', 'cherryTree'] },
-    { x0: -118, x1: -78, z0: -72, z1: -50, n: 7, ids: ['pineTree', 'hedge'] },
-    { x0: 12, x1: 44, z0: 22, z1: 60, n: 7, ids: ['cherryTree', 'hedge', 'benchWood'] },
-    { x0: 12, x1: 50, z0: -46, z1: -18, n: 7, ids: ['pineTree', 'hedge'] },
-    { x0: -64, x1: -28, z0: 60, z1: 86, n: 7, ids: ['cherryTree', 'pineTree', 'hedge'] },
-    { x0: 72, x1: 112, z0: 80, z1: 104, n: 7, ids: ['cherryTree', 'hedge'] },
-    { x0: 112, x1: 132, z0: -46, z1: -12, n: 4, ids: ['pineTree', 'hedge'] },
-    { x0: -76, x1: -40, z0: -100, z1: -76, n: 6, ids: ['pineTree', 'hedge', 'benchWood'] },
-    { x0: -38, x1: -8, z0: -100, z1: -78, n: 6, ids: ['pineTree', 'cherryTree', 'hedge'] },
-    { x0: 8, x1: 44, z0: -100, z1: -78, n: 6, ids: ['pineTree', 'hedge', 'benchWood'] },
-    { x0: 52, x1: 72, z0: -96, z1: -70, n: 4, ids: ['pineTree', 'hedge'] },
-    { x0: -40, x1: -20, z0: -48, z1: -28, n: 3, ids: ['pineTree', 'hedge', 'benchWood'] },
-    { x0: 30, x1: 62, z0: 46, z1: 76, n: 6, ids: ['cherryTree', 'hedge', 'benchWood'] },
-    { x0: 116, x1: 134, z0: -140, z1: -72, n: 16, ids: ['pineTree', 'hedge', 'cherryTree'] },
-    { x0: 114, x1: 132, z0: 20, z1: 70, n: 9, ids: ['cherryTree', 'hedge', 'benchWood'] },
-    { x0: 50, x1: 64, z0: 122, z1: 140, n: 6, ids: ['cherryTree', 'hedge'] },
-    { x0: -46, x1: -26, z0: -36, z1: -16, n: 5, ids: ['hedge', 'pineTree'] },
-    { x0: 8, x1: 26, z0: -104, z1: -84, n: 5, ids: ['pineTree', 'hedge'] },
-    { x0: 44, x1: 62, z0: 14, z1: 40, n: 5, ids: ['cherryTree', 'hedge'] },
+    { x0: -20, x1: 14, z0: -24, z1: -12, n: 5, ids: ['pineTree', 'hedge', 'cherryTree'] },
+    { x0: 6, x1: 22, z0: 12, z1: 30, n: 5, ids: ['cherryTree', 'hedge', 'benchWood'] },
+    { x0: -46, x1: -32, z0: 34, z1: 46, n: 4, ids: ['cherryTree', 'pineTree', 'hedge'] },
+    { x0: 18, x1: 34, z0: 38, z1: 50, n: 4, ids: ['cherryTree', 'hedge'] },
+    { x0: 52, x1: 66, z0: -18, z1: 2, n: 4, ids: ['pineTree', 'hedge'] },
+    { x0: -34, x1: -18, z0: -40, z1: -26, n: 4, ids: ['pineTree', 'hedge', 'benchWood'] },
+    { x0: 6, x1: 22, z0: -38, z1: -26, n: 3, ids: ['pineTree', 'hedge'] },
+    { x0: 34, x1: 44, z0: 44, z1: 62, n: 4, ids: ['cherryTree', 'hedge', 'benchWood'] },
+    { x0: -46, x1: -34, z0: -30, z1: -16, n: 3, ids: ['hedge', 'pineTree'] },
+    // The garden corner where the third west-lane house used to stand.
+    { x0: -42, x1: -32, z0: 28, z1: 42, n: 4, ids: ['cherryTree', 'pineTree', 'hedge', 'benchWood'] },
   ];
+  /** The chase camera's keep-out disc behind the spawn (see CAM_KEEP). */
+  const inCamKeep = (x, z, pad = 0) =>
+    Math.hypot(x - CAM_KEEP.x, z - CAM_KEEP.z) < CAM_KEEP.r + pad;
   const placedGreen = [];
   for (const b of GREEN_BANDS) {
     for (let i = 0; i < b.n; i++) {
       const x = b.x0 + rng() * (b.x1 - b.x0);
       const z = b.z0 + rng() * (b.z1 - b.z0);
       if (onPaving(x, z, 1.6) || inWater(x, z, 2) || inRect(x, z, PLAZA_KEEP)) continue;
+      if (inCamKeep(x, z, 1.6)) continue;
       if (onBuilding(x, z, 1.4)) continue;
       if (placedGreen.some((p) => Math.hypot(p.x - x, p.z - z) < 4.2)) continue;
       placedGreen.push({ x, z });
@@ -1146,7 +1178,7 @@ export function createWorld(game, { gradientMap = null } = {}) {
     const LIMIT = WORLD.bounds - 6;
     const blockedAt = (x, z) =>
       onPaving(x, z, 2) || inWater(x, z, 3.5) || onBuilding(x, z, 2.5)
-      || inRect(x, z, PLAZA_KEEP)
+      || inRect(x, z, PLAZA_KEEP) || inCamKeep(x, z, 2)
       || KEEP_OUT.some((k) => Math.hypot(k.x - x, k.z - z) < k.r);
 
     /** Place one piece of filler, or refuse. Returns 1/0 so callers can count. */
@@ -1244,14 +1276,14 @@ export function createWorld(game, { gradientMap = null } = {}) {
     // Inside the built-up box the bar is high (nothing further than ~17 units
     // from something); the outskirts are deliberately looser so they read as
     // countryside rather than a second city.
-    const CORE_BOX = { x0: -138, x1: 148, z0: WORLD.waterZ, z1: 152 };
-    const barFor = (x, z) => (inRect(x, z, CORE_BOX) ? 13.5 : 16.5);
+    const CORE_BOX = { x0: -66, x1: 70, z0: WORLD.waterZ, z1: 78 };
+    const barFor = (x, z) => (inRect(x, z, CORE_BOX) ? 13.5 : 15.0);
     const STEP = 6;
     // Two budgets, because the two jobs are different sizes: the city core is
     // dressed properly, and whatever is left over is spent breaking up the
     // outskirts. Together they stay well inside the prop budget.
-    const CORE_BUDGET = 166;
-    const BUDGET = 186;
+    const CORE_BUDGET = 44;
+    const BUDGET = 76;
 
     // Pass 1: survey. Every grid sample that is too far from anything, with how
     // bare it is. Pass 2: fill the *worst* first (city before outskirts) so a
@@ -1297,17 +1329,17 @@ export function createWorld(game, { gradientMap = null } = {}) {
     const FIELD_C = [PAL.parkSoft, PAL.park, PAL.parkSoft, PAL.gravel];
     const B0 = WORLD.bounds;
     const STRIPS = [
-      { x0: -B0 + 6, x1: -140, z0: WORLD.waterZ + 10, z1: B0 - 6 },   // west
-      { x0: 150, x1: B0 - 6, z0: WORLD.waterZ + 10, z1: B0 - 6 },     // east
-      { x0: -140, x1: 150, z0: 150, z1: B0 - 6 },                     // south
+      { x0: -B0 + 4, x1: -68, z0: WORLD.waterZ + 8, z1: B0 - 4 },     // west
+      { x0: 72, x1: B0 - 4, z0: WORLD.waterZ + 8, z1: B0 - 4 },       // east
+      { x0: -68, x1: 72, z0: 80, z1: B0 - 4 },                        // south
     ];
     for (const s of STRIPS) {
-      for (let x = s.x0 + 10; x <= s.x1; x += 22) {
-        for (let z = s.z0 + 10; z <= s.z1; z += 22) {
+      for (let x = s.x0 + 8; x <= s.x1; x += 18) {
+        for (let z = s.z0 + 8; z <= s.z1; z += 18) {
           const fx = x + (rng() - 0.5) * 9;
           const fz = z + (rng() - 0.5) * 9;
           if (inWater(fx, fz, 8) || onPaving(fx, fz, 4)) continue;
-          patchParts.push(roundedRect(fx, fz, 22 + rng() * 16, 19 + rng() * 14, 6,
+          patchParts.push(roundedRect(fx, fz, 18 + rng() * 12, 16 + rng() * 10, 5,
             FIELD_C[Math.floor(rng() * FIELD_C.length)], 0.014));
         }
       }
@@ -1481,14 +1513,14 @@ export function createWorld(game, { gradientMap = null } = {}) {
 
   addPoi({
     id: 'home_shop', x: HOME.shop.x, z: HOME.shop.z,
-    label: 'Sushi Paws', icon: '🍣', district: 'old_market', kind: 'shop',
+    label: GAME.title, icon: '🍣', district: 'old_market', kind: 'shop',
   });
   addPoi({
     id: 'home_bed', x: HOME.bed.x, z: HOME.bed.z,
     label: 'Your Bed', icon: '🛏️', district: 'old_market', kind: 'home',
   });
   addPoi({
-    id: 'delivery_board', x: HOME.shop.x + 3, z: HOME.shop.z + 4,
+    id: 'delivery_board', x: HOME.board.x, z: HOME.board.z,
     label: 'Delivery Board', icon: '📋', district: 'old_market', kind: 'job_board',
   });
   for (const s of SUPPLIERS) {
@@ -1510,19 +1542,19 @@ export function createWorld(game, { gradientMap = null } = {}) {
     });
   }
   const LANDMARKS = [
-    { id: 'lm_shrine', x: -110, z: 42, label: 'Little Shrine', icon: '⛩️', district: 'old_market' },
-    { id: 'lm_torii', x: -110, z: 26.5, label: 'Shrine Gate', icon: '⛩️', district: 'old_market' },
-    { id: 'lm_tea_house', x: -113, z: 11.2, label: 'Tea House', icon: '🍵', district: 'old_market' },
-    { id: 'lm_bathhouse', x: -89, z: 12.6, label: 'Bathhouse', icon: '♨️', district: 'old_market' },
-    { id: 'lm_market_square', x: -58, z: 16, label: 'Market Square', icon: '🏮', district: 'old_market' },
-    { id: 'lm_fish_market', x: -40, z: -109, label: 'Fish Market Hall', icon: '🐟', district: 'fish_harbor' },
-    { id: 'lm_docks', x: -20, z: -144, label: 'The Docks', icon: '⚓', district: 'fish_harbor' },
-    { id: 'lm_station', x: 64, z: -14, label: 'Central Station', icon: '🚉', district: 'downtown' },
-    { id: 'lm_tower_row', x: 92, z: 30, label: 'Tower Row', icon: '🏙️', district: 'downtown' },
-    { id: 'lm_canal', x: 102, z: 59, label: 'Tower Canal', icon: '🌊', district: 'downtown' },
-    { id: 'lm_home_lane', x: 0, z: 104, label: 'Home Lane', icon: '🏡', district: 'residential' },
-    { id: 'lm_festival', x: 74, z: -134, label: 'Festival Square', icon: '🎆', district: 'neon_street' },
-    { id: 'lm_neon_lane', x: 95, z: -100, label: 'Neon Lane', icon: '🏮', district: 'neon_street' },
+    { id: 'lm_shrine', x: -51, z: 16, label: 'Little Shrine', icon: '⛩️', district: 'old_market' },
+    { id: 'lm_torii', x: -51, z: 5.5, label: 'Shrine Gate', icon: '⛩️', district: 'old_market' },
+    { id: 'lm_tea_house', x: -40, z: 22, label: 'Tea House', icon: '🍵', district: 'old_market' },
+    { id: 'lm_bathhouse', x: -54, z: 24.5, label: 'Bathhouse', icon: '♨️', district: 'old_market' },
+    { id: 'lm_market_square', x: -31, z: 12, label: 'Market Square', icon: '🏮', district: 'old_market' },
+    { id: 'lm_fish_market', x: -17, z: -28, label: 'Fish Market Hall', icon: '🐟', district: 'fish_harbor' },
+    { id: 'lm_docks', x: -10, z: -64, label: 'The Docks', icon: '⚓', district: 'fish_harbor' },
+    { id: 'lm_station', x: 27, z: 22, label: 'Central Station', icon: '🚉', district: 'downtown' },
+    { id: 'lm_tower_row', x: 40, z: 6, label: 'Tower Row', icon: '🏙️', district: 'downtown' },
+    { id: 'lm_canal', x: 48, z: 33, label: 'Tower Canal', icon: '🌊', district: 'downtown' },
+    { id: 'lm_home_lane', x: 0, z: 52, label: 'Home Lane', icon: '🏡', district: 'residential' },
+    { id: 'lm_festival', x: 33, z: -50, label: 'Festival Square', icon: '🎆', district: 'neon_street' },
+    { id: 'lm_neon_lane', x: 44, z: -38, label: 'Neon Lane', icon: '🏮', district: 'neon_street' },
   ];
   for (const l of LANDMARKS) addPoi({ ...l, kind: 'landmark' });
 
@@ -1662,8 +1694,8 @@ export function createWorld(game, { gradientMap = null } = {}) {
       post.rotation.y = yaw;
       group.add(post);
     };
-    mkSign(88.2, -92, -Math.PI / 2, 3.4, 1.4, '#ff6aa8');
-    mkSign(101.8, -84, Math.PI / 2, 3.0, 1.3, '#6ad8ff');
+    mkSign(40.35, -33, -Math.PI / 2, 3.0, 1.3, '#ff6aa8');
+    mkSign(49.4, -32, Math.PI / 2, 2.8, 1.2, '#6ad8ff');
   }
 
   // =========================================================================
@@ -1766,8 +1798,10 @@ export function createWorld(game, { gradientMap = null } = {}) {
   // ---- startup report -----------------------------------------------------
   let instancedMeshes = 0;
   let triangles = 0;
+  let drawCalls = 0;
   group.traverse((o) => {
     if (!o.isMesh) return;
+    drawCalls++;
     const g = o.geometry;
     if (!g) return;
     const tri = (g.index ? g.index.count : (g.attributes.position ? g.attributes.position.count : 0)) / 3;
@@ -1783,7 +1817,7 @@ export function createWorld(game, { gradientMap = null } = {}) {
     instancedMeshes,
     colliders: colliders.length,
     triangles: Math.round(triangles),
-    drawCalls: (() => { let n = 0; group.traverse((o) => { if (o.isMesh) n++; }); return n; })(),
+    drawCalls,
     rejected: rejects.length,
     byDistrict,
     pois: pois.length,
@@ -1819,10 +1853,15 @@ export function createWorld(game, { gradientMap = null } = {}) {
     dispose,
     // Handy for tooling/tests; not part of the contract.
     _placements: kept,
+    _water: WATER,
+    _lanes: LANES,
     _rejects: rejects,
     _props: props,
     _fill: fill,
-    _stats: { buildings: built.count, props: propBuilt.count, instancedMeshes, colliders: colliders.length, triangles, byDistrict },
+    _stats: {
+      buildings: built.count, props: propBuilt.count, instancedMeshes,
+      colliders: colliders.length, triangles, drawCalls, byDistrict,
+    },
   };
 }
 

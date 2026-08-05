@@ -8,8 +8,13 @@
 import { EV } from './bus.js';
 import { SAVE_VERSION } from './state.js';
 
-const PREFIX = 'sushipaws.save.';
-const SETTINGS_KEY = 'sushipaws.settings';
+const PREFIX = 'catushi.save.';
+const SETTINGS_KEY = 'catushi.settings';
+// The game shipped as "Sushi Paws" before it was renamed to Catushi. Saves
+// written under the old namespace are adopted once, on first run, so a rename
+// never costs anybody their shop.
+const LEGACY_PREFIX = 'sushipaws.save.';
+const LEGACY_SETTINGS = 'sushipaws.settings';
 const AUTOSAVE_SLOT = 'auto';
 export const SLOTS = ['auto', 'slot1', 'slot2', 'slot3'];
 
@@ -45,8 +50,24 @@ function migrate(blob) {
   return d;
 }
 
+/** One-time adoption of pre-rename saves. Copies, never deletes. */
+function adoptLegacy(store) {
+  if (!store) return;
+  try {
+    if (store.getItem('catushi.migrated')) return;
+    for (const slot of SLOTS) {
+      const old = store.getItem(LEGACY_PREFIX + slot);
+      if (old && !store.getItem(PREFIX + slot)) store.setItem(PREFIX + slot, old);
+    }
+    const oldSet = store.getItem(LEGACY_SETTINGS);
+    if (oldSet && !store.getItem(SETTINGS_KEY)) store.setItem(SETTINGS_KEY, oldSet);
+    store.setItem('catushi.migrated', '1');
+  } catch { /* a failed migration must never block a new game */ }
+}
+
 export function createSaveSystem(state, bus, { autosaveSeconds = 90 } = {}) {
   const store = storage();
+  adoptLegacy(store);
   let sinceAuto = 0;
   let lastError = null;
 

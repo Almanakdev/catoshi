@@ -9,11 +9,13 @@ import { RECIPES, STEPS, recipeTime } from '../data/recipes.js';
 import { ingredient } from '../data/ingredients.js';
 import { QUEST_INDEX } from '../data/quests.js';
 import { npc as npcById } from '../data/npcs.js';
+import { recipeEconomy, profitTone, bestCookableRecipe, PERFECT_MULT } from '../data/economy.js';
 
 const STYLE_ID = 'sp-recipe-style';
 
 const CSS = `
 .spr-body{ flex:1; min-height:0; display:grid; grid-template-columns:230px 1fr; gap:12px; }
+.spr-left{ min-height:0; display:flex; flex-direction:column; gap:6px; }
 .spr-list{ min-height:0; overflow:auto; display:flex; flex-direction:column; gap:5px; padding-right:4px; }
 .spr-list::-webkit-scrollbar{ width:8px; }
 .spr-list::-webkit-scrollbar-thumb{ background:rgba(59,47,38,.2); border-radius:8px; }
@@ -49,6 +51,37 @@ const CSS = `
   background:rgba(200,80,63,.08); border:1.5px dashed rgba(200,80,63,.35);
   border-radius:12px; padding:8px 10px; font-size:12px; color:var(--sp-ink-soft);
 }
+
+/* ---- the money maths --------------------------------------------------- */
+.spr-money{
+  display:flex; flex-direction:column; gap:3px;
+  border:1.5px solid rgba(59,47,38,.12); border-radius:12px; padding:8px 10px;
+  background:rgba(255,255,255,.7);
+}
+.spr-money .spr-headline{ font-size:13px; font-weight:900; line-height:1.4; }
+.spr-money .spr-sub2{ font-size:11px; font-weight:700; color:var(--sp-ink-soft); line-height:1.4; }
+.spr-money.spr-t-good{ border-color:rgba(126,163,106,.55); background:rgba(126,163,106,.13); }
+.spr-money.spr-t-ok{   border-color:rgba(240,185,63,.55);  background:rgba(240,185,63,.14); }
+.spr-money.spr-t-bad{  border-color:rgba(200,80,63,.45);   background:rgba(200,80,63,.09); }
+.spr-p-good{ color:var(--sp-green); }
+.spr-p-ok{   color:#b8862a; }
+.spr-p-bad{  color:var(--sp-red); }
+
+/* ---- "best money-maker" shortcut --------------------------------------- */
+.spr-best{
+  display:flex; align-items:center; gap:7px; width:100%; box-sizing:border-box;
+  font-family:inherit; font-weight:800; font-size:11.5px; text-align:left; cursor:pointer;
+  background:rgba(240,185,63,.2); border:1.5px solid rgba(240,185,63,.6);
+  border-radius:11px; padding:6px 9px; color:var(--sp-ink);
+}
+.spr-best:hover{ border-color:var(--sp-red); }
+.spr-best:focus-visible{ outline:2px solid var(--sp-red); outline-offset:2px; }
+.spr-best.spr-none{ display:none; }
+.spr-best .spr-b-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.spr-best .spr-b-val{ font-weight:900; color:var(--sp-green); font-variant-numeric:tabular-nums; }
+.spr-list .sp-item.spr-star{ box-shadow:0 0 0 2px rgba(240,185,63,.5); }
+.spr-list .sp-item .sp-meta{ font-variant-numeric:tabular-nums; }
+
 @media (max-width:820px){ .spr-body{ grid-template-columns:180px 1fr; } }
 `;
 
@@ -91,6 +124,15 @@ function shortHint(u) {
   return '🔒';
 }
 
+/** 'good' | 'ok' | 'bad' -> the class that colours a profit number. */
+const TONE_CLASS = { good: 'spr-p-good', ok: 'spr-p-ok', bad: 'spr-p-bad' };
+
+/** "+20¢" / "−4¢", always signed so the sign does the reading for you. */
+function signed(n) {
+  const v = Math.round(n);
+  return `${v >= 0 ? '+' : '−'}${money(Math.abs(v))}`;
+}
+
 export function createRecipeBook(game) {
   styleOnce();
 
@@ -112,32 +154,79 @@ export function createRecipeBook(game) {
   p.root.setAttribute('aria-label', 'Recipe book');
 
   const body = el('div', 'spr-body');
+  const left = el('div', 'spr-left');
+  const bestBtn = el('button', 'spr-best spr-none');
+  bestBtn.type = 'button';
+  const bestName = el('span', 'spr-b-name', '');
+  const bestVal = el('span', 'spr-b-val', '');
+  bestBtn.append(el('span', null, '💰'), bestName, bestVal);
   const list = el('div', 'spr-list');
   list.setAttribute('role', 'listbox');
+  left.append(bestBtn, list);
   const detail = el('div', 'spr-detail');
-  body.append(list, detail);
+  body.append(left, detail);
   p.body.append(body);
 
   let open = false;
   let selected = RECIPES.length ? RECIPES[0].id : null;
+  /** Recipe id of the current money-maker, recomputed on every render. */
+  let bestId = null;
+
+  bestBtn.addEventListener('click', () => {
+    if (!bestId) return;
+    selected = bestId;
+    renderList(); renderDetail();
+  });
 
   // ---------------------------------------------------------------- list
+  function renderBest() {
+    const best = bestCookableRecipe(state);
+    bestId = best ? best.recipe.id : null;
+    if (!best) { bestBtn.classList.add('spr-none'); return; }
+    bestBtn.classList.remove('spr-none');
+    bestName.textContent = best.cookable
+      ? `Best right now: ${best.recipe.name}`
+      : `Best to shop for: ${best.recipe.name}`;
+    bestVal.textContent = signed(best.profit);
+    bestBtn.title = best.cookable
+      ? `You already have everything for ${best.recipe.name}.`
+      : `Buy the ingredients for ${best.recipe.name} — it has the biggest gap between cost and price.`;
+  }
+
   function renderList() {
+    renderBest();
     list.textContent = '';
     for (const r of RECIPES) {
       const known = state.knowsRecipe(r.id);
       const cookable = known && state.hasItems(r.ingredients);
+      const econ = known ? recipeEconomy(r, state) : null;
+
+      let meta;
+      if (!known) meta = shortHint(r.unlock);
+      else if (!econ || !econ.ok) meta = '—';
+      else meta = signed(econ.profit);
+
       const row = item({
         icon: known ? r.icon : '🔒',
         name: known ? r.name : '???',
-        meta: known ? (cookable ? '✔' : `${money(r.basePrice)}`) : shortHint(r.unlock),
+        meta,
         onClick: () => { selected = r.id; renderList(); renderDetail(); },
       });
       if (!known) row.classList.add('spr-locked');
       if (r.id === selected) row.classList.add('sp-sel');
+      if (known && r.id === bestId) row.classList.add('spr-star');
       row.setAttribute('role', 'option');
       row.setAttribute('aria-selected', r.id === selected ? 'true' : 'false');
-      if (cookable) row.querySelector('.sp-meta').classList.add('spr-ok');
+
+      const metaEl = row.querySelector('.sp-meta');
+      if (known && econ && econ.ok && metaEl) {
+        metaEl.classList.add(TONE_CLASS[profitTone(econ)]);
+        row.title = `Costs ${money(econ.cost)} to make, sells for ${money(econ.sell)} — profit ${signed(econ.profit)}`;
+      } else if (known && econ && !econ.ok && metaEl) {
+        metaEl.classList.add('spr-p-bad');
+        row.title = econ.missing ? econ.missing.where : 'Some ingredients are not on sale yet';
+      }
+      if (cookable) row.classList.add('spr-ready');
       list.append(row);
     }
   }
@@ -164,6 +253,30 @@ export function createRecipeBook(game) {
       detail.append(el('div', 'spr-lockbox', `🔒 ${unlockHint(r.unlock)}`));
     }
 
+    // ---- the money, in one sentence -------------------------------------
+    const econ = recipeEconomy(r, state);
+    if (econ) {
+      const tone = profitTone(econ);
+      const box = el('div', `spr-money spr-t-${tone}`);
+      if (!econ.ok && econ.missing) {
+        box.append(el('div', 'spr-headline', `You cannot buy ${econ.missing.name} anywhere right now`));
+        box.append(el('div', 'spr-sub2', `${econ.missing.where}. Sells for ${money(econ.sell)} once you can make it.`));
+      } else {
+        const head = el('div', 'spr-headline');
+        head.append(document.createTextNode(
+          `Costs ${money(econ.cost)} to make, sells for ${money(econ.sell)} — profit `));
+        head.append(el('b', TONE_CLASS[tone], signed(econ.profit)));
+        box.append(head);
+        box.append(el('div', 'spr-sub2',
+          `A Perfect plate pays ${money(econ.perfect)} (${PERFECT_MULT}x) — profit ${signed(econ.perfectProfit)}.`));
+        if (econ.trip) {
+          box.append(el('div', 'spr-sub2',
+            `The ${econ.trip.ingredient.toLowerCase()} means a trip to ${econ.trip.district} (${econ.trip.supplier}).`));
+        }
+      }
+      detail.append(box);
+    }
+
     // Ingredients checklist
     detail.append(el('div', 'spr-h', 'Ingredients'));
     const needs = el('div', 'sp-col');
@@ -174,9 +287,17 @@ export function createRecipeBook(game) {
       const want = need.qty || 1;
       const ok = have >= want;
       if (!ok) allHave = false;
+      const line = econ && econ.lines.find((l) => l.id === need.id);
       const row = el('div', 'spr-need');
       row.append(el('span', null, (ing && ing.icon) || '📦'));
       row.append(el('span', null, (ing && ing.name) || need.id));
+      if (line && line.ok) {
+        const price = el('span', 'spr-hint', `${money(line.unit)} ea`);
+        price.title = `Cheapest at ${line.supplier ? line.supplier.name : 'a stall'}`;
+        row.append(price);
+      } else if (line) {
+        row.append(el('span', 'spr-hint spr-p-bad', 'not on sale'));
+      }
       const cnt = el('span', `spr-cnt ${ok ? 'spr-ok' : 'spr-no'}`, `${have}/${want}`);
       row.append(cnt);
       needs.append(row);
