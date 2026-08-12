@@ -35,6 +35,7 @@ import { createShadowTutorial } from './game/shadowTutorial.js';
 import { createGuideUI } from './ui/guideUI.js';
 import { createDialogueUI } from './ui/dialogueUI.js';
 import { createUI, createPanelManager } from './ui/index.js';
+import { createTouchControls } from './ui/touchControls.js';
 import { createSocialUI } from './ui/socialUI.js';
 import { createWalletStatus, readSession, writeSession } from './ui/walletStatus.js';
 import { createSimpleMinimap } from './ui/simpleMinimap.js';
@@ -43,6 +44,7 @@ import { createAudio } from './audio/audio.js';
 import { catFromOptions } from './cat/catLoader.js';
 import { makeToonGradient } from './engine/textures.js';
 import { isTypingInUI } from './engine/inputGuard.js';
+import { initDevice, IS_TOUCH, isPhone } from './engine/device.js';
 import * as KIT from './ui/kit.js';
 import { HOME, DISTRICTS } from './data/districts.js';
 import { SUPPLIERS, isOpenAt } from './data/suppliers.js';
@@ -53,6 +55,10 @@ import { NPCS } from './data/npcs.js';
 // ===========================================================================
 // Renderer, scene, camera
 // ===========================================================================
+// Writes .is-touch / .is-phone and the live --app-vh onto <html> before any
+// stylesheet is asked a question, and keeps them current as the phone rotates.
+initDevice();
+
 const app = document.getElementById('app') || document.body;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, RENDER.maxPixelRatio));
@@ -124,7 +130,10 @@ const bus = createBus();
 const state = createState(bus);
 state.registerUpgrades(UPGRADES);
 const save = createSaveSystem(state, bus, { autosaveSeconds: 90 });
-save.loadSettings();
+// A phone that has never been here gets the low tier: no post stack, no shadow
+// map, DPR 1. Anyone who has chosen a quality keeps their choice on every
+// device — the settings panel still offers all three.
+if (!save.loadSettings() && (IS_TOUCH || isPhone())) state.settings.quality = 0;
 const audio = createAudio(state);
 const interactions = createInteractions(bus);
 
@@ -303,7 +312,11 @@ function buildComposer(q) {
 function applyQuality(level) {
   const q = QUALITY[Math.max(0, Math.min(QUALITY.length - 1, level | 0))] || QUALITY[1];
   renderer.shadowMap.enabled = q.shadows;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatio));
+  // Phone panels run at DPR 3. Rendering the city at 3x is nine times the work
+  // of 1x for a difference nobody can see at arm's length, so the tier's ratio
+  // is capped further on a phone even when the player picks High.
+  const maxDpr = isPhone() ? Math.min(q.pixelRatio, 1.3) : q.pixelRatio;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
   buildComposer(q);
   scene.traverse((o) => { if (o.isMesh) o.castShadow = o.castShadow && q.shadows; });
   return q;
@@ -316,7 +329,7 @@ game.setQuality = (n) => { state.settings.quality = n; applyQuality(n); save.sav
 let player = null;
 let clock = null, orders = null, restaurant = null, cooking = null, fishing = null,
     delivery = null, foraging = null, quests = null, npcs = null, ui = null, dialogue = null,
-    guide = null, tutorial = null, guideUI = null,
+    guide = null, tutorial = null, guideUI = null, touch = null,
     social = null, walletStatus = null, minimap = null, shadowTut = null, landing = null;
 let gameStarted = false;
 let muted = false;
@@ -361,6 +374,10 @@ async function boot() {
   if (guideUI && guideUI.fx) hideInDepthPass(guideUI.fx);
 
   ui = createUI(game);                game.ui2 = ui;
+
+  // Thumbstick + action buttons. A no-op handle on desktop, so nothing below
+  // has to ask what kind of device this is.
+  touch = createTouchControls(game);  game.touch = touch;
 
   // ENGINE CITY-style social + wallet + minimap chrome
   const session = readSession();
@@ -493,7 +510,24 @@ function wireEvents() {
   });
 
   window.addEventListener('resize', onResize);
+  // iOS reports the pre-rotation size for a frame or two, and the URL bar
+  // collapsing fires visualViewport rather than window resize.
+  window.addEventListener('orientationchange', () => {
+    onResize();
+    setTimeout(onResize, 160);
+    setTimeout(onResize, 480);
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', onResize, { passive: true });
+  }
   window.addEventListener('beforeunload', () => { try { save.save('auto'); } catch { /* best effort */ } });
+
+  // The canvas is a game surface, not a document: a long press must not raise
+  // the copy/share sheet, and a double tap must not zoom the page.
+  const canvas = renderer.domElement;
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('dblclick', (e) => e.preventDefault());
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
 }
 
 function onResize() {
@@ -557,6 +591,7 @@ function wireGameChrome() {
 function showGameChrome(on) {
   const chrome = document.getElementById('game-chrome');
   if (chrome) chrome.classList.toggle('show', !!on);
+  if (touch) touch.setVisible(!!on);
   if (on) {
     if (social) social.show();
     if (minimap) minimap.show();
@@ -664,6 +699,7 @@ function animate() {
       guide.update(dt);
       guideUI.update(dt);
       ui.update(dt);
+      if (touch) touch.update(dt);
       audio.update(dt);
       if (social) social.update(dt, p);
       if (minimap) minimap.update(p.x, p.z, player.yaw || 0);

@@ -6,19 +6,22 @@
 // data and need no gameplay code.
 
 /** The reusable interaction primitives every cooking step is built from. */
+// `hint` is the keyboard wording, `touchHint` the finger one. Every step is
+// already playable both ways (src/ui/cookingUI.js binds pointer events on the
+// arena); only the words have to change, and the words are content.
 export const STEP_TYPES = {
   // Stop a sweeping indicator inside a target zone.
-  timing: { name: 'Timing', hint: 'Press SPACE in the green zone' },
+  timing: { name: 'Timing', hint: 'Press SPACE in the green zone', touchHint: 'Tap when the marker is in the green' },
   // Hold a key for the right duration.
-  hold:   { name: 'Hold',   hint: 'Hold SPACE — release at the marker' },
+  hold:   { name: 'Hold',   hint: 'Hold SPACE — release at the marker', touchHint: 'Press and hold — let go at the marker' },
   // Repeated directional strokes (slicing).
-  slice:  { name: 'Slice',  hint: 'Swipe / press the arrow shown' },
+  slice:  { name: 'Slice',  hint: 'Swipe / press the arrow shown', touchHint: 'Swipe the way the arrow points' },
   // Drag items into slots.
-  drag:   { name: 'Place',  hint: 'Drag each item into its outline' },
+  drag:   { name: 'Place',  hint: 'Drag each item into its outline', touchHint: 'Drag each item into its outline' },
   // Rapid rhythmic taps in time with a beat.
-  roll:   { name: 'Roll',   hint: 'Tap SPACE on the beat' },
+  roll:   { name: 'Roll',   hint: 'Tap SPACE on the beat', touchHint: 'Tap on the beat' },
   // Arrange pieces to match a target pattern.
-  arrange:{ name: 'Plate',  hint: 'Match the pattern shown' },
+  arrange:{ name: 'Plate',  hint: 'Match the pattern shown', touchHint: 'Tap the pieces to match the pattern' },
 };
 
 /**

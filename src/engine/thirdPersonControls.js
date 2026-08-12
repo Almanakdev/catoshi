@@ -6,7 +6,13 @@ import { isTypingInUI } from './inputGuard.js';
 // - WASD moves relative to the camera direction.
 // - Space jumps (gravity arc, no double-jump); Ctrl / C crouches.
 // - The character turns to face the way it's moving and plays a walk cycle.
-// - Mouse wheel zooms; building/vendor colliders push the character out of walls.
+// - Mouse wheel or a two-finger pinch zooms; building/vendor colliders push the
+//   character out of walls.
+//
+// Touch devices drive the same movement through `setMoveVector` / `setRun` /
+// `requestJump` (src/ui/touchControls.js owns the on-screen stick and buttons).
+// Keyboard and stick are additive, so a Bluetooth keyboard on a tablet works
+// alongside the thumb controls.
 //
 // Returns { update, setEnabled, state }.
 
@@ -25,6 +31,14 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
     lookAhead: 0.85,
     targetDamp: 13,
     positionDamp: 11,
+    // Radians per pixel of drag. Fingers are coarser than a mouse, so the touch
+    // layer passes a slightly higher number.
+    lookSpeed: 0.005,
+    // Cursor-toward-the-edge steering. Meaningless without hover, so the touch
+    // layer turns it off — otherwise the camera spins wherever you last tapped.
+    edgeSteer: true,
+    // Two-finger pinch to zoom. Units of follow distance per pixel of spread.
+    pinchSpeed: 0.02,
     ...opts,
   };
   const PLAYER_H = TUNE.playerH;
@@ -82,10 +96,34 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
   // screen edge rotates the view that way, with a comfortable dead zone in the
   // middle so the camera holds still while you're just hovering. Click-and-drag
   // still works on top of it for fast, precise swings.
+  //
+  // Exactly one pointer owns the drag at a time. Without that gate a second
+  // finger landing on the canvas (or on the thumbstick) would feed its own
+  // coordinates into the same lastX/lastY and snap the camera across the city.
   const cursor = { x: 0, y: 0, over3D: false }; // normalized -1..1 from center
+  let dragId = null;
+  /** Live pointers on the canvas, for the pinch gesture. */
+  const touches = new Map();
+  let pinchDist = 0;
+
+  const zoomBy = (d) => {
+    dist = Math.max(TUNE.distMin, Math.min(TUNE.distMax, dist + d));
+  };
+
   dom.addEventListener('pointerdown', (e) => {
     if (!enabled && !lookMode) return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size >= 2) {
+      // Second finger down: this is a pinch, not a swing. Drop the drag so the
+      // view does not lurch while the fingers spread.
+      dragging = false;
+      dragId = null;
+      const [a, b] = Array.from(touches.values());
+      pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+      return;
+    }
     dragging = true;
+    dragId = e.pointerId;
     lastX = e.clientX;
     lastY = e.clientY;
     dom.style.cursor = 'grabbing';
@@ -97,13 +135,23 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
     // Only edge-steer while the cursor is over the 3D view — hovering the
     // customize panel or other UI shouldn't spin the camera.
     cursor.over3D = e.target === dom;
-    if (!dragging) return;
+
+    if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size >= 2) {
+      const [a, b] = Array.from(touches.values());
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinchDist) zoomBy((pinchDist - d) * TUNE.pinchSpeed);
+      pinchDist = d;
+      return;
+    }
+
+    if (!dragging || e.pointerId !== dragId) return;
     const dx = e.clientX - lastX;
     const dy = e.clientY - lastY;
     lastX = e.clientX;
     lastY = e.clientY;
-    state.yaw -= dx * 0.005;
-    state.pitch -= dy * 0.005;
+    state.yaw -= dx * TUNE.lookSpeed;
+    state.pitch -= dy * TUNE.lookSpeed;
     // Flexible pitch: negative lifts the camera above the character (look down),
     // positive drops it low (look up past them).
     state.pitch = Math.max(-0.9, Math.min(1.4, state.pitch));
@@ -112,8 +160,17 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
   document.documentElement.addEventListener('mouseleave', () => {
     cursor.over3D = false;
   });
-  const endDrag = () => {
+  const endDrag = (e) => {
+    if (e && e.pointerId != null) {
+      touches.delete(e.pointerId);
+      if (touches.size < 2) pinchDist = 0;
+      if (dragId != null && e.pointerId !== dragId) return;
+    } else {
+      touches.clear();
+      pinchDist = 0;
+    }
     dragging = false;
+    dragId = null;
     if (enabled) dom.style.cursor = 'grab';
   };
   window.addEventListener('pointerup', endDrag);
@@ -123,10 +180,16 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
     'wheel',
     (e) => {
       if (!enabled && !lookMode) return;
-      dist = Math.max(TUNE.distMin, Math.min(TUNE.distMax, dist + Math.sign(e.deltaY)));
+      zoomBy(Math.sign(e.deltaY));
     },
     { passive: true }
   );
+
+  // --- Touch / external movement input ---------------------------------------
+  // The on-screen stick writes here; it is summed with WASD rather than
+  // replacing it, and its magnitude drives an analog walk speed.
+  const stick = { x: 0, z: 0 };
+  let stickRun = false;
 
   let facing = state.yaw;
   const pos = character.group.position;
@@ -201,7 +264,7 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
     if (isTypingInUI()) clearKeys();
 
     // Cursor-follow look (skipped while dragging — drag has manual control).
-    if (enabled && !dragging && cursor.over3D) {
+    if (enabled && TUNE.edgeSteer && !dragging && cursor.over3D) {
       state.yaw -= steer(cursor.x) * 1.9 * dt;
       state.pitch -= steer(cursor.y) * 1.2 * dt;
       state.pitch = Math.max(-0.9, Math.min(1.4, state.pitch));
@@ -225,11 +288,22 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
       if (keys['KeyS']) move.sub(forward);
       if (keys['KeyD']) move.add(right);
       if (keys['KeyA']) move.sub(right);
+      const keyed = move.lengthSq() > 0;
+      // Stick deflection is analog: a small push is a stroll, a full push is a
+      // walk, and pinning it to the rim breaks into a run without a button.
+      const tilt = Math.min(1, Math.hypot(stick.x, stick.z));
+      if (tilt > 0.001) {
+        move.addScaledVector(right, stick.x);
+        move.addScaledVector(forward, stick.z);
+      }
       if (move.lengthSq() > 0) {
         move.normalize();
         // No sprinting out of a crouch; crouch-walking is a ~40% speed waddle.
-        const run = (keys['ShiftLeft'] || keys['ShiftRight']) && crouch < 0.35;
-        const spd = (run ? TUNE.run : TUNE.walk) * (1 - 0.58 * crouch);
+        const run = (keys['ShiftLeft'] || keys['ShiftRight'] || (tilt > 0.001 && (stickRun || tilt > 0.94)))
+          && crouch < 0.35;
+        // Keys are all-or-nothing, so they always win the throttle.
+        const throttle = keyed || run ? 1 : Math.max(0.34, tilt);
+        const spd = (run ? TUNE.run : TUNE.walk * throttle) * (1 - 0.58 * crouch);
         pos.x += move.x * spd * dt;
         pos.z += move.z * spd * dt;
         speed = spd;
@@ -364,7 +438,25 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
   function setEnabled(v) {
     enabled = v;
     dom.style.cursor = v ? 'grab' : 'default';
+    // A panel that opens mid-stride must not leave the cat jogging into a wall
+    // behind the scrim — the finger that was holding the stick never gets a
+    // pointerup once the button is covered.
+    if (!v) { stick.x = 0; stick.z = 0; stickRun = false; }
   }
+
+  /**
+   * Analog movement from an on-screen stick or gamepad.
+   * @param {number} x strafe, -1 (left) … 1 (right)
+   * @param {number} z forward, -1 (back) … 1 (forward)
+   */
+  function setMoveVector(x, z) {
+    stick.x = Math.max(-1, Math.min(1, Number(x) || 0));
+    stick.z = Math.max(-1, Math.min(1, Number(z) || 0));
+  }
+  /** Hold the run modifier (the on-screen run button). */
+  function setRun(v) { stickRun = !!v; }
+  /** Same gate as the Space keydown edge: one jump per touchdown. */
+  function requestJump() { if (enabled && grounded) jumpQueued = true; }
   // Force the follow distance (used to zoom in inside small interior rooms).
   function setDist(d) {
     dist = d;
@@ -385,6 +477,7 @@ export function createThirdPerson(camera, dom, character, colliders, bounds, gro
 
   return {
     update, setEnabled, state, setDist, setFacing, updateLook, setLookMode, applyKnockback,
+    setMoveVector, setRun, requestJump,
     get dist() { return dist; },
     get grounded() { return grounded; },
     get enabled() { return enabled; },

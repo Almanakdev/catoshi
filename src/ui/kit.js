@@ -157,6 +157,36 @@ const CSS = `
 @media (max-width:820px){
   .sp-panel{ font-size:12px; }
 }
+
+/* ------------------------------------------------------------------ phones
+   Panels already size themselves with min(px, vw) so they fit; what they need
+   here is thumb-sized hit targets, room for the notch, and inner scrolling
+   that does not drag the page behind them. */
+@media (max-width:700px){
+  .sp-panel{
+    padding:12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    max-width:calc(100vw - 20px);
+    max-height:calc(100dvh - 20px);
+    overscroll-behavior:contain;
+  }
+  .sp-close{ width:32px; height:32px; font-size:16px; }
+  .sp-btn{ padding:10px 16px; font-size:13px; min-height:40px; }
+  .sp-item{ padding:10px 10px; min-height:46px; }
+  .sp-list{ -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+
+}
+
+/* On touch the keyboard prompt is redundant — and worse, it duplicates the
+   label already printed on the interact button it would sit next to. Toasts
+   lift clear of that button, whose top edge is ~102px off the bottom. */
+@media (pointer:coarse){
+  .sp-prompt{ display:none; }
+  .sp-toast-wrap{
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 118px);
+    width:100%; padding:0 12px; box-sizing:border-box;
+  }
+  .sp-toast{ text-align:center; }
+}
 `;
 
 export function injectStyles() {

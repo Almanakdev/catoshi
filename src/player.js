@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { createThirdPerson } from './engine/thirdPersonControls.js';
 import { isTypingInUI } from './engine/inputGuard.js';
+import { IS_TOUCH } from './engine/device.js';
 import { CAT_CONTROLS, PLAYER_CAT } from './config.js';
 import { PROGRESSION } from './data/progression.js';
 import { EV } from './game/bus.js';
@@ -25,7 +26,13 @@ export function createPlayer(game, cat, { spawn }) {
     175,
     world.groundHeightAt,
     [],
-    CAT_CONTROLS
+    {
+      ...CAT_CONTROLS,
+      // A finger has no hover state, so edge-steering would spin the camera
+      // toward wherever the last tap landed. Drag is the whole look control on
+      // touch, and it wants a slightly longer throw than a mouse.
+      ...(IS_TOUCH ? { edgeSteer: false, lookSpeed: 0.0062 } : null),
+    }
   );
   controls.setFacing(spawn.yaw || 0);
   // Camera dir uses the same yaw as the character, which puts it BEHIND them.

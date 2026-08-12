@@ -1,7 +1,7 @@
 {
   "name": "catoshi",
   "version": "1.0.0",
-  "description": "CATOSHI — a cozy semi-open-world game about a blue chef-cat who dreams of becoming the greatest sushi master in Slice City.",
+  "description": "CATOSHI — a cozy semi-open-world game about a blue chef-cat who dreams of becoming the greatest sushi master in Catoshi.",
   "type": "module",
   "scripts": {
     "dev": "vite",

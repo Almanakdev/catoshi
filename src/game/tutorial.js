@@ -19,12 +19,15 @@
 
 import { EV } from './bus.js';
 import * as UI from '../ui/kit.js';
+import { IS_TOUCH } from '../engine/device.js';
 
 // ---------------------------------------------------------------------------
 // THE STEPS
 // ---------------------------------------------------------------------------
 //
 // { id, title, hint, target, done(game, t), on?, reward?, teaches? }
+// `touchHint` / `touchTeaches` are the same lines written for thumbs; steps
+// that name no key at all need neither.
 //
 //   target   a spec the guide knows how to resolve (see guide.resolve)
 //   done     pure predicate; `t` exposes the runner's little scratchpad:
@@ -40,14 +43,17 @@ export const TUTORIAL_STEPS = [
     id: 'move',
     title: 'Stretch your legs',
     hint: 'Use WASD to walk. Hold Shift to run.',
+    touchHint: 'Drag the stick to walk. Push it to the edge to run.',
     target: { kind: 'npc', id: 'master_kuro' },
     done: (game, t) => t.moved >= 8,
     teaches: 'The compass at the top right always points at your next stop.',
+    touchTeaches: 'The arrow on this banner always points at your next stop.',
   },
   {
     id: 'meet_kuro',
     title: 'Meet Master Kuro',
     hint: 'Walk up to Master Kuro and press E.',
+    touchHint: 'Walk up to Master Kuro and tap the paw button.',
     target: { kind: 'npc', id: 'master_kuro' },
     on: [EV.INTERACT, EV.DIALOGUE, EV.QUEST_STARTED],
     done: (game, t) => t.mark('talked:master_kuro'),
@@ -57,6 +63,7 @@ export const TUTORIAL_STEPS = [
     id: 'buy_supplies',
     title: 'Buy rice and salmon',
     hint: 'Press E at the stall. Buy 2 rice, 2 salmon.',
+    touchHint: 'Tap the paw button at the stall. Buy 2 rice, 2 salmon.',
     target: { kind: 'item', id: 'rice' },
     on: [EV.INVENTORY, EV.ITEM_GAINED],
     done: (game) => game.state.countItem('rice') >= 2 && game.state.countItem('salmon') >= 2,
@@ -73,6 +80,7 @@ export const TUTORIAL_STEPS = [
     id: 'open_shop',
     title: 'Open the shop',
     hint: 'Press E on the sign by the door.',
+    touchHint: 'Tap the paw button at the sign by the door.',
     target: { kind: 'sign' },
     on: [EV.ORDER_NEW],
     done: (game) => !!(game.state.shop && game.state.shop.isOpen),
@@ -82,6 +90,7 @@ export const TUTORIAL_STEPS = [
     id: 'take_order',
     title: 'Take an order',
     hint: 'Press E at the counter to pick an order.',
+    touchHint: 'Tap the paw button at the counter to pick an order.',
     target: { kind: 'counter' },
     on: [EV.COOK_START],
     done: (game, t) => t.mark('cookStart'),
@@ -108,9 +117,11 @@ export const TUTORIAL_STEPS = [
     id: 'free_play',
     title: 'That is the whole loop',
     hint: 'Buy, cook, serve, repeat. Journal is Q.',
+    touchHint: 'Buy, cook, serve, repeat. Everything else is under ☰.',
     target: { kind: 'counter' },
     done: (game, t) => t.elapsed > 12,
     teaches: 'Q journal · I basket · R recipes · M map · Esc settings.',
+    touchTeaches: 'The ☰ button holds your journal, basket, recipes, map and settings.',
   },
 ];
 
@@ -230,7 +241,8 @@ export function createTutorial(game, guide) {
           const line = receipt();
           if (line) UI.toast(line, { icon: '🧾', tone: 'good', ms: 4200 });
         }
-        if (step.teaches) UI.toast(step.teaches, { icon: '💡', ms: 3600 });
+        const learn = (IS_TOUCH && step.touchTeaches) || step.teaches;
+        if (learn) UI.toast(learn, { icon: '💡', ms: 3600 });
         if (game.guideUI && typeof game.guideUI.flashDone === 'function') game.guideUI.flashDone();
       }
     }
@@ -341,9 +353,9 @@ export function createTutorial(game, guide) {
     return {
       id: step.id,
       title: step.title,
-      hint: step.hint,
+      hint: (IS_TOUCH && step.touchHint) || step.hint,
       target: step.target || null,
-      teaches: step.teaches || null,
+      teaches: (IS_TOUCH && step.touchTeaches) || step.teaches || null,
       index,
       count: TUTORIAL_STEPS.length,
     };

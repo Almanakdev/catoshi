@@ -70,6 +70,10 @@ const CSS = `
 .sps-tier b{ color:var(--sp-ink); }
 .sps-empty{ padding:18px 6px; text-align:center; color:var(--sp-ink-soft); font-size:12px; }
 @media (max-width:860px){ .sps-body{ grid-template-columns:1fr 210px; } }
+/* Stack the stock list over the basket once the columns get too thin to read. */
+@media (max-width:640px){
+  .sps-body{ grid-template-columns:1fr; grid-template-rows:1fr minmax(120px, 38%); }
+}
 `;
 
 function styleOnce() {

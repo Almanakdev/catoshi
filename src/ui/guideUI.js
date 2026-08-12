@@ -122,6 +122,29 @@ const CSS = `
   .spgd-wrap{ top:52px; }
   .spgd-title{ font-size:15px; }
 }
+/* Phones stack every HUD card down the left edge, which leaves the top band
+   with no free middle to centre in. The banner moves to the bottom instead —
+   above the touch buttons, below the city, and next to the thumb that is about
+   to act on what it says. */
+@media (max-width:700px), (pointer:coarse){
+  .spgd-wrap{
+    top:auto;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 186px);
+    padding:0 calc(env(safe-area-inset-right, 0px) + 12px) 0 calc(env(safe-area-inset-left, 0px) + 12px);
+  }
+  .spgd-banner{ max-width:calc(100% / var(--sp-scale,1)); transform-origin:bottom center; }
+  .spgd-banner.spgd-pop{ animation:spgd-pop-up .32s cubic-bezier(.2,1.5,.5,1) both; }
+  @keyframes spgd-pop-up{
+    from{ transform:translateY(-9px) scale(calc(var(--sp-scale,1) * .92)); opacity:0; }
+    to{ transform:translateY(0) scale(var(--sp-scale,1)); opacity:1; }
+  }
+  .spgd-title{ font-size:14px; }
+  .spgd-hint{ font-size:11px; }
+}
+/* Landscape phones have no 186px to spare under the banner. */
+@media (max-height:520px) and (pointer:coarse){
+  .spgd-wrap{ bottom:calc(env(safe-area-inset-bottom, 0px) + 130px); }
+}
 `;
 
 function styleOnce() {

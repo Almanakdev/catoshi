@@ -1,5 +1,82 @@
 # Development log
 
+## 2026-08-12 — Mobile
+
+The site and the game now work on a phone. Nothing about the desktop experience
+changed except two bugs that happened to be worst on a small screen.
+
+### Detection
+`src/engine/device.js` is the single answer to "what kind of device is this".
+`IS_TOUCH` keys off `pointer: coarse` / `hover: none` rather than
+`maxTouchPoints`, so a touchscreen laptop keeps the desktop layout. It writes
+`.is-touch` / `.is-phone` / `.is-short` and a live `--app-vh` onto `<html>`.
+`?touch=1` forces the touch build on a desktop for testing; `?touch=0` forces it
+off.
+
+### Playing with thumbs
+`src/ui/touchControls.js` is the keyboard's counterpart: a floating stick
+bottom-left, and menu / run / jump / interact bottom-right. It owns no gameplay —
+movement goes into the controller's new analog input, the paw button calls the
+same `interactions.use()` the E key does, and the menu sheet opens the same
+panels the letter keys open. The interact button mirrors `EV.PROMPT` exactly, so
+it appears and reads the same as the keyboard prompt (which is hidden on touch,
+since it would duplicate the button beside it).
+
+`thirdPersonControls` gained `setMoveVector` / `setRun` / `requestJump`, summed
+with WASD rather than replacing it. Stick deflection is analog: a light push
+strolls, a full push runs. Drag look is now gated on a single pointer id and a
+second finger becomes a pinch-zoom — without that gate the camera snapped across
+the city whenever a thumb landed on the stick.
+
+### Layout
+Four corners of HUD cards is a desktop luxury. On a phone the bottom two belong
+to the thumbs, so the cards stack down the left edge, the compass goes (the
+minimap and the guide arrows already cover navigation, and Map is in the touch
+menu), the quest card goes (the guide banner says the same thing), and the guide
+banner moves to the bottom. Chat becomes a sheet that slides up from the menu.
+Everything is offset by `env(safe-area-inset-*)` for the notch and the home bar.
+
+The landing page got a hamburger drawer — the inline nav links were simply
+`display: none` below 820px with nothing in their place, so Lore, Tokenomics and
+the Whitepaper were unreachable on a phone. The pin-and-rotate scroll stack is
+desktop-only now: pinning against a viewport that changes height every time the
+URL bar slides makes ScrollTrigger recalculate mid-scroll, and the rotated panels
+overflow a narrow screen. Below 821px the sections are ordinary stacked blocks
+and only the fade-up reveals survive.
+
+Phones default to the low quality tier on first run (anyone who has picked a
+quality keeps it), and the pixel ratio is capped at 1.3 even on High — rendering
+the city at DPR 3 is nine times the work of DPR 1 for a difference nobody can see
+at arm's length.
+
+### Two bugs this surfaced
+- **The shadow tutorial's card ate clicks while hidden.** `#shadow-tutorial` is
+  `pointer-events: none`, but `.tut-card` opts back in for its buttons — and it
+  did so even with the tutorial idle, at z-index 120. It was swallowing clicks in
+  the bottom-centre of the screen at every width; on a short viewport that
+  included the start screen's New Game button. It now leaves the layout entirely
+  when the tutorial is not showing.
+- **Cooking had no exit without an Escape key.** The "Esc to stop" chip was a
+  static badge, so a phone player who started a dish was stuck in it. It is a
+  button now, wired to the same `abort()`, and reads "✕ Stop" on touch.
+
+### Wording
+Prompts that name a key now have a touch variant beside them in the same place
+the keyboard one lives: `touchHint` on `STEP_TYPES` and on the tutorial steps,
+and a whole parallel `TOUCH_STEPS` for the controls walkthrough, whose shadow
+cursor points at the real on-screen buttons.
+
+### Testing
+`tools/mobile.mjs` is `smoke.mjs`'s counterpart: it boots the built game at
+375×667, 390×844 and 844×390, drives the stick and the buttons, and fails on any
+overlapping or off-screen chrome, on a cooking or fishing session it cannot get
+out of, or on any console error. It must print MOBILE LAYOUT OK.
+
+**Known flake, pre-existing:** `smoke.mjs`'s cooking check ("cooking promise
+never settled") fails intermittently under the software rasteriser — its
+key-mashing loop can finish before the dish does. Verified against a pristine
+checkout: it fails there too, and the same tree passes on a re-run.
+
 ## 2026-08-05 — Milestone 2: Catushi
 
 Four changes requested after playing milestone 1: rename, shrink the town, make

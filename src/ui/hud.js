@@ -37,12 +37,22 @@ const CSS = `
   padding:8px 10px;
 }
 
-.sph-tl{ position:absolute; left:12px;  top:12px;    width:196px; transform-origin:top left; }
-.sph-tc{ position:absolute; left:50%;   top:12px;    transform-origin:top center; }
-.sph-tr{ position:absolute; right:12px; top:12px;    transform-origin:top right; }
-.sph-quest{ position:absolute; left:12px; top:132px; width:214px; transform-origin:top left; }
-.sph-bl{ position:absolute; left:12px;  bottom:14px; width:196px; transform-origin:bottom left; }
-.sph-br{ position:absolute; right:12px; bottom:14px; width:204px; transform-origin:bottom right; }
+/* Layout anchors. --sp-hud-top clears whatever chrome sits above the HUD (the
+   Home / mute / Buy row), and the safe-area insets keep everything out of the
+   notch and the home indicator. */
+.sph-root{
+  --sp-hud-top:  calc(env(safe-area-inset-top, 0px) + 52px);
+  --sp-hud-left: calc(env(safe-area-inset-left, 0px) + 12px);
+  --sp-hud-right:calc(env(safe-area-inset-right, 0px) + 12px);
+  --sp-hud-bot:  calc(env(safe-area-inset-bottom, 0px) + 14px);
+}
+
+.sph-tl{ position:absolute; left:var(--sp-hud-left);  top:var(--sp-hud-top); width:196px; transform-origin:top left; }
+.sph-tc{ position:absolute; left:50%;   top:calc(env(safe-area-inset-top, 0px) + 12px); transform-origin:top center; }
+.sph-tr{ position:absolute; right:var(--sp-hud-right); top:var(--sp-hud-top); transform-origin:top right; }
+.sph-quest{ position:absolute; left:var(--sp-hud-left); top:calc(var(--sp-hud-top) + 120px); width:214px; transform-origin:top left; }
+.sph-bl{ position:absolute; left:var(--sp-hud-left);  bottom:var(--sp-hud-bot); width:196px; transform-origin:bottom left; }
+.sph-br{ position:absolute; right:var(--sp-hud-right); bottom:var(--sp-hud-bot); width:204px; transform-origin:bottom right; }
 
 .sph-tl,.sph-tr,.sph-quest,.sph-bl,.sph-br{ transform:scale(var(--sp-scale,1)); }
 .sph-tc{ transform:translateX(-50%) scale(var(--sp-scale,1)); }
@@ -106,6 +116,9 @@ const CSS = `
 .sph-quest .sph-qobj{ font-size:12px; font-weight:700; line-height:1.3; margin:4px 0 6px; }
 .sph-quest.sph-empty{ display:none; }
 
+/* sph-grow lets the label shrink its box but not its text, so at narrow card
+   widths "Stamina" used to run straight through the number beside it. */
+.sph-bl .sph-label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .sph-bl .sph-tired{ font-size:15px; opacity:0; transition:opacity .2s; }
 .sph-bl.sph-low .sph-tired{ opacity:1; }
 .sph-bl.sph-low .sph-label{ color:var(--sp-red); }
@@ -126,6 +139,61 @@ const CSS = `
   .sph-tl,.sph-quest{ width:172px; }
   .sph-br,.sph-bl{ width:172px; }
   .sph-compass canvas{ width:70px; height:70px; }
+}
+
+/* ------------------------------------------------------------------ phones
+   Four corners of cards is a desktop luxury. On a phone the bottom two corners
+   belong to the thumbs, so every card collapses into one top-left column —
+   stats, then stamina, then orders — with the clock and the minimap down the
+   right edge. The compass card goes entirely: the minimap and the guide arrows
+   already cover navigation, and the map opens from the touch menu.
+
+   The offsets below are hand-stacked rather than flexed because the cards are
+   independent absolutely-positioned siblings, and the two that can grow (orders
+   is capped at four rows) sit at the bottom of the column where growth is free. */
+@media (max-width:700px){
+  .sph-root{ --sp-scale:.86; }
+  .sph-tl{ width:152px; }
+
+  .sph-tc{
+    left:auto; right:var(--sp-hud-right); top:calc(env(safe-area-inset-top, 0px) + 12px);
+    transform-origin:top right; transform:scale(var(--sp-scale,1));
+    padding:5px 10px;
+  }
+  .sph-tc .sph-time{ font-size:12px; }
+  .sph-tc .sph-dist{ display:none; }
+
+  .sph-bl,.sph-br{ width:152px; }
+  .sph-coins{ font-size:15px; }
+  .sph-line{ font-size:12px; }
+  /* 131 rendered pixels is not enough for icon + word + number + mood, and the
+     ⚡ already says which bar this is. */
+  .sph-bl .sph-label{ display:none; }
+}
+
+/* Everything that reacts to the on-screen controls rather than to width: the
+   two bottom cards move out of the thumbs' corners, and the two cards that
+   duplicate something else go. The compass shares the top-right with the
+   minimap and its Map button now lives in the touch menu; the quest card says
+   what the guide banner already says. */
+@media (max-width:700px), (pointer:coarse){
+  .sph-tr,.sph-quest{ display:none; }
+  .sph-bl{
+    left:var(--sp-hud-left); top:calc(var(--sp-hud-top) + 104px); bottom:auto;
+    transform-origin:top left;
+  }
+  .sph-br{
+    left:var(--sp-hud-left); right:auto; top:calc(var(--sp-hud-top) + 160px); bottom:auto;
+    transform-origin:top left;
+  }
+}
+
+/* Landscape phones: the column would run off the bottom, so shrink it and let
+   orders overlap back toward the middle-left. */
+@media (max-height:520px) and (pointer:coarse){
+  .sph-root{ --sp-scale:.74; }
+  .sph-bl{ top:calc(var(--sp-hud-top) + 90px); }
+  .sph-br{ top:calc(var(--sp-hud-top) + 138px); }
 }
 `;
 
@@ -510,7 +578,9 @@ export function createHUD(game) {
 
   // -------------------------------------------------------------- compass
   function drawCompass() {
-    if (!ctx) return;
+    // Phones hide the compass card entirely — don't pay for a canvas nobody
+    // can see. `offsetParent` is null exactly when an ancestor is display:none.
+    if (!ctx || tr.offsetParent === null) return;
     const w = cvs.width, h = cvs.height;
     const cx = w / 2, cy = h / 2, r = w / 2 - 12;
     ctx.clearRect(0, 0, w, h);

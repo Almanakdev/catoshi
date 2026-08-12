@@ -2,13 +2,14 @@
 // gameplay tutorial in tutorial.js — this one only teaches how to move/look.
 
 import { isTypingInUI } from '../engine/inputGuard.js';
+import { IS_TOUCH } from '../engine/device.js';
 
 const STORAGE_KEY = 'catoshi:shadow-tutorial-v1';
 
-const STEPS = [
+const KEY_STEPS = [
   {
     id: 'welcome',
-    title: 'Welcome to Slice City',
+    title: 'Welcome to Catoshi',
     body: 'A quick walkthrough. Follow the shadow cursor — or just try it yourself.',
     mode: 'pointer',
     advance: 'click',
@@ -65,6 +66,71 @@ const STEPS = [
     advance: 'click',
   },
 ];
+
+/**
+ * The same seven beats for thumbs. There is no keydown to wait on here, so
+ * every step advances on Continue and the shadow cursor points at the real
+ * on-screen control (`target` is a live selector into src/ui/touchControls.js).
+ */
+const TOUCH_STEPS = [
+  {
+    id: 'welcome',
+    title: 'Welcome to Catoshi',
+    body: 'A quick tour of the controls. Tap Continue when you have tried each one.',
+    mode: 'pointer',
+    advance: 'click',
+  },
+  {
+    id: 'move',
+    title: 'Walk',
+    body: 'Drag the stick at the bottom-left. Push it further to walk faster.',
+    mode: 'point',
+    target: '.tc-stick',
+    advance: 'click',
+  },
+  {
+    id: 'look',
+    title: 'Look around',
+    body: 'Drag anywhere on the city to swing the camera. Pinch with two fingers to zoom.',
+    mode: 'look',
+    advance: 'time',
+    wait: 3.2,
+  },
+  {
+    id: 'run',
+    title: 'Sprint',
+    body: 'Tap Run to sprint — or just pin the stick to the edge.',
+    mode: 'point',
+    target: '.tc-run',
+    advance: 'click',
+  },
+  {
+    id: 'jump',
+    title: 'Jump',
+    body: 'Tap Jump to hop.',
+    mode: 'point',
+    target: '.tc-jump',
+    advance: 'click',
+  },
+  {
+    id: 'interact',
+    title: 'Interact',
+    body: 'The big paw button lights up near stalls, your shop sign, Master Kuro and job boards. It tells you what it will do.',
+    mode: 'point',
+    target: '.tc-use',
+    advance: 'click',
+  },
+  {
+    id: 'menu',
+    title: 'Everything else',
+    body: 'The ☰ button opens your bag, recipes, quests, the map and chat. Home (top-left) returns to the landing page.',
+    mode: 'point',
+    target: '.tc-menu',
+    advance: 'click',
+  },
+];
+
+const STEPS = IS_TOUCH ? TOUCH_STEPS : KEY_STEPS;
 
 export function isShadowTutorialDone() {
   try { return window.localStorage.getItem(STORAGE_KEY) === '1'; }
@@ -140,6 +206,16 @@ export function createShadowTutorial(opts = {}) {
     placeCursor((r.left + r.width * 0.5) / window.innerWidth, (r.top + r.height * 0.45) / window.innerHeight);
   }
 
+  /**
+   * The touch controls are built after this module, and the interact button
+   * only exists visually when something is in reach, so the target is resolved
+   * every frame rather than cached.
+   */
+  function targetOf(step) {
+    if (!step || !step.target) return null;
+    try { return document.querySelector(step.target); } catch { return null; }
+  }
+
   function renderStep() {
     const step = STEPS[index];
     if (!step) return finish();
@@ -156,6 +232,7 @@ export function createShadowTutorial(opts = {}) {
     if (step.mode === 'pointer') placeCursor(0.52, 0.42);
     else if (step.mode === 'keys') placeCursor(0.5, 0.62);
     else if (step.mode === 'look') placeCursor(0.5, 0.5);
+    else if (step.mode === 'point') pointAt(targetOf(step), 0.5, 0.75);
     else if (step.mode === 'menu') {
       pointAt(menuTarget || document.getElementById('btn-home'), 0.08, 0.06);
     }
@@ -222,7 +299,11 @@ export function createShadowTutorial(opts = {}) {
         k.classList.toggle('tut-key-pulse', Math.floor(t * 2 + i) % 2 === 0);
       });
     } else if (step.mode === 'pointer') {
+      elCursor.classList.remove('tut-cursor-look');
       placeCursor(0.52 + Math.sin(t * 1.4) * 0.03, 0.42 + Math.cos(t * 1.1) * 0.02);
+    } else if (step.mode === 'point') {
+      elCursor.classList.remove('tut-cursor-look');
+      pointAt(targetOf(step), 0.5, 0.75);
     } else if (step.mode === 'menu') {
       pointAt(menuTarget || document.getElementById('btn-home'), 0.08, 0.06);
     }
