@@ -16,6 +16,7 @@
 
 import { el, panel, button, bar, badge, scrim, THEME, injectStyles } from './kit.js';
 import { QUALITY_GRADES } from '../data/progression.js';
+import { IS_TOUCH } from '../engine/device.js';
 
 const CSS = `
 .ck-stage{
@@ -243,9 +244,29 @@ const CSS = `
 .ck-row .sp-ico{ font-size:16px; width:20px; text-align:center; flex:0 0 20px; }
 .ck-row .ck-rowv{ color:var(--sp-ink-soft); }
 
+.ck-stop{
+  flex:0 0 auto; font-family:inherit; font-weight:800; font-size:11px; cursor:pointer;
+  color:var(--sp-ink); background:rgba(255,255,255,.7);
+  border:1.5px solid rgba(59,47,38,.12); border-radius:999px; padding:5px 11px;
+  white-space:nowrap;
+}
+.ck-stop:hover{ border-color:var(--sp-red); color:var(--sp-red); }
+.ck-stop:focus-visible{ outline:2px solid var(--sp-red); outline-offset:2px; }
+
 @media (max-width:820px), (max-height:620px){
   .ck-arena{ min-height:130px; padding:8px; }
   .ck-dots{ display:none; }
+}
+@media (max-width:700px){
+  .ck-stage{
+    width:calc(100vw - 16px); max-height:calc(100svh - 16px);
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .ck-top{ flex-wrap:wrap; gap:6px; }
+  .ck-progress{ order:5; flex-basis:100%; }
+  .ck-stop{ padding:8px 13px; font-size:12px; }
+  .ck-arena{ min-height:clamp(150px, 30svh, 240px); }
+  .ck-track, .ck-hold{ width:96%; }
 }
 `;
 
@@ -317,8 +338,16 @@ export function createCookingUI(game) {
   const stepLabel = el('span', 'ck-steplabel', '');
   const progressBar = bar(0, THEME.gold);
   progressBar.classList.add('ck-progress');
-  const escBadge = badge('Esc to stop', '⎋');
-  top.append(dishIcon, dishName, stepLabel, progressBar, escBadge);
+  // Escape is the abort, and on a touchscreen there is no Escape. This is the
+  // same abort with a hit target — without it a phone player who starts a dish
+  // has no way out of the mini-game.
+  let onStop = null;
+  const stopBtn = el('button', 'ck-stop');
+  stopBtn.type = 'button';
+  stopBtn.textContent = IS_TOUCH ? '✕ Stop' : '⎋ Esc to stop';
+  stopBtn.title = 'Stop cooking';
+  stopBtn.addEventListener('click', () => { if (onStop) onStop(); });
+  top.append(dishIcon, dishName, stepLabel, progressBar, stopBtn);
 
   const dots = el('div', 'ck-dots');
   const promptEl = el('div', 'ck-prompt', '');
@@ -1017,6 +1046,8 @@ export function createCookingUI(game) {
     setStep, setPrompt, setHint,
     timing, hold, slice, drag, roll, arrange,
     verdict, progress, result, destroy,
+    /** What the stop button does. The engine points this at its `abort()`. */
+    onStop(cb) { onStop = typeof cb === 'function' ? cb : null; },
     get root() { return stage.root; },
     get arena() { return arena; },
   };

@@ -2,6 +2,10 @@
 // requiring ENGINE CITY's full road-graph payload.
 
 import { ROADS, DISTRICTS, HOME } from '../data/districts.js';
+import { IS_TOUCH, isPhone, onViewportChange } from '../engine/device.js';
+
+/** The docked map is ~110px wide on a phone, so the idle hint has to be short. */
+const IDLE_HINT = IS_TOUCH ? 'Tap a pin · tap to zoom' : 'Click a pin · expand map';
 
 export function createSimpleMinimap(world) {
   const wrap = document.getElementById('minimap-wrap');
@@ -38,8 +42,13 @@ export function createSimpleMinimap(world) {
   }
 
   const cityAspect = (maxX - minX) / (maxZ - minZ);
-  const SMALL_H = 168;
-  const SMALL_W = Math.round(Math.max(140, Math.min(240, SMALL_H * cityAspect)));
+  // The docked size is a fraction of the screen on a phone — 168px tall is a
+  // fifth of a portrait viewport, and it has to share the right edge with the
+  // clock. It is recomputed on rotation (see onViewportChange below).
+  const smallH = () => (isPhone() ? 104 : 168);
+  const smallW = () => Math.round(Math.max(110, Math.min(240, smallH() * cityAspect)));
+  let SMALL_H = smallH();
+  let SMALL_W = smallW();
   let CSS_W = SMALL_W;
   let CSS_H = SMALL_H;
   let scale = 1, offX = 0, offY = 0;
@@ -69,7 +78,7 @@ export function createSimpleMinimap(world) {
 
   function expand() {
     expanded = true;
-    const m = 48;
+    const m = isPhone() ? 14 : 48;
     const availW = window.innerWidth - m * 2;
     const availH = window.innerHeight - m * 2;
     let h = availH, w = h * cityAspect;
@@ -115,12 +124,12 @@ export function createSimpleMinimap(world) {
   function clearDestination() {
     dest = null;
     wrap.classList.remove('has-dest');
-    if (infoEl) infoEl.textContent = 'Click a pin · expand map';
+    if (infoEl) infoEl.textContent = IDLE_HINT;
     if (clearBtn) clearBtn.style.display = 'none';
     if (world && world.setWaypoint) world.setWaypoint(null);
   }
   if (clearBtn) clearBtn.style.display = 'none';
-  if (infoEl) infoEl.textContent = 'Click a pin · expand map';
+  if (infoEl) infoEl.textContent = IDLE_HINT;
 
   function update(px, pz, yaw = 0) {
     // Background
@@ -188,9 +197,18 @@ export function createSimpleMinimap(world) {
     ctx.strokeRect(1, 1, CSS_W - 2, CSS_H - 2);
   }
 
+  // Rotating a phone changes both the docked size and, while it is open, the
+  // expanded one. Re-running the same two calls covers both.
+  const stopWatching = onViewportChange(() => {
+    SMALL_H = smallH();
+    SMALL_W = smallW();
+    if (expanded) expand(); else setSize(SMALL_W, SMALL_H);
+  });
+
   return {
     show: () => wrap.classList.add('show'),
     hide: () => { wrap.classList.remove('show'); shrink(); },
+    destroy: () => { stopWatching(); },
     update,
     setDestination,
     clearDestination,

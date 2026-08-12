@@ -162,13 +162,15 @@ export function createSaveSystem(state, bus, { autosaveSeconds = 90 } = {}) {
     if (!store) return;
     try { store.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch { /* ignore */ }
   }
+  /** @returns {boolean} true when stored settings were found and applied. */
   function loadSettings() {
-    if (!store) return;
+    if (!store) return false;
     try {
       const raw = store.getItem(SETTINGS_KEY);
-      if (!raw) return;
+      if (!raw) return false;
       Object.assign(state.settings, JSON.parse(raw));
-    } catch { /* ignore */ }
+      return true;
+    } catch { return false; }
   }
 
   function update(dt) {

@@ -4,7 +4,7 @@
 import { isTypingInUI } from '../engine/inputGuard.js';
 
 const CHATTER = [
-  'best salmon in Slice City rn', 'anyone at the market?', 'CATOSHI to the moon 🍣',
+  'best salmon in Catoshi rn', 'anyone at the market?', 'CATOSHI to the moon 🍣',
   'gg', 'master kuro is goated', 'who just meowed at me',
   'first time here, city is huge', 'buy $CATOSHI on pumpfun', 'lost downtown again',
   'that neon street tho 🔥', 'meet at the harbor?', 'cooking a perfect roll',
@@ -18,7 +18,7 @@ const CHATTER = [
   'the purple sky hits different', 'ok who is on the leaderboard',
 ];
 
-const JOIN_LINES = ['joined Slice City', 'connected', 'is exploring the alleys'];
+const JOIN_LINES = ['joined Catoshi', 'connected', 'is exploring the alleys'];
 
 function nameColor(name) {
   let h = 0;
@@ -174,9 +174,25 @@ export function createSocialUI(opts = {}) {
   function show() {
     root.classList.add('show');
     renderBoard();
-    post('Server', 'Welcome to Slice City. Press Enter to chat.', 'sys');
+    post('Server', 'Welcome to Catoshi. Press Enter to chat.', 'sys');
   }
-  function hide() { root.classList.remove('show'); }
+  function hide() { root.classList.remove('show'); root.classList.remove('chat-open'); }
 
-  return { show, hide, update, addScore, post, setNames };
+  /**
+   * Phones dock the chat off-screen (see the `.chat-open` rules in landing.css)
+   * because the bottom-right corner belongs to the action buttons. The touch
+   * menu slides it back in with this.
+   */
+  function toggleChat(v) {
+    const open = v == null ? !root.classList.contains('chat-open') : !!v;
+    root.classList.toggle('chat-open', open);
+    if (open) input.focus();
+    else input.blur();
+    return open;
+  }
+
+  const closeBtn = document.getElementById('chat-close');
+  if (closeBtn) closeBtn.addEventListener('click', () => toggleChat(false));
+
+  return { show, hide, update, addScore, post, setNames, toggleChat };
 }

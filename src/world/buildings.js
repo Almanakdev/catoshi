@@ -271,7 +271,7 @@ export function makeSushiSign({ vertical = true, name = 'CATOSHI' } = {}) {
   const H = vertical ? 384 : 112;
   const canvas = makeCanvas(W, H);
   const ctx = canvas.getContext('2d');
-  // Neon-purple brand board (Slice City / pic 3 stall vibe).
+  // Neon-purple brand board (Catoshi / pic 3 stall vibe).
   const PURPLE = '#6b2d8a', CREAM = '#f8e8d0', FRAME = '#3a1848', NEON = '#ff7a9a';
 
   ctx.fillStyle = FRAME; ctx.fillRect(0, 0, W, H);

@@ -21,6 +21,7 @@ import { createCookingUI } from '../ui/cookingUI.js';
 import { recipe as findRecipe, STEPS, STEP_TYPES, recipeTime } from '../data/recipes.js';
 import { PROGRESSION, gradeFor } from '../data/progression.js';
 import { ingredient } from '../data/ingredients.js';
+import { IS_TOUCH } from '../engine/device.js';
 
 // --------------------------------------------------------------- constants
 
@@ -105,6 +106,9 @@ export function createCooking(game) {
   const EVT = game.EV || EV;
   const rng = typeof game.rng === 'function' ? game.rng : Math.random;
   const ui = createCookingUI(game);
+  // The stage's stop button is the Escape key with a hit target — same abort,
+  // and the only way out of a dish on a device with no Escape key.
+  if (ui.onStop) ui.onStop(() => abort());
 
   /** @type {null | object} the one in-flight cooking session */
   let session = null;
@@ -578,7 +582,8 @@ export function createCooking(game) {
     const mods = currentMods();
 
     ui.setPrompt(step.label);
-    ui.setHint(mods.tired ? `${STEP_TYPES[type].hint} — your paws are shaking` : STEP_TYPES[type].hint);
+    const stepHint = (IS_TOUCH && STEP_TYPES[type].touchHint) || STEP_TYPES[type].hint;
+    ui.setHint(mods.tired ? `${stepHint} — your paws are shaking` : stepHint);
 
     switch (type) {
       case 'timing':  return playTiming(step, cfg, budget, mods);

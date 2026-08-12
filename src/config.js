@@ -2,7 +2,7 @@
 
 export const GAME = {
   title: 'CATOSHI',
-  tagline: 'Blue cat. Neon knives. Slice City.',
+  tagline: 'Blue cat. Neon knives. Catoshi.',
   build: '0.5.0-catoshi',
   /** Contract address shown on the landing page (copy CA). Update when live. */
   ca: 'CATOSHi1111111111111111111111111111111111',
@@ -74,7 +74,7 @@ export const RENDER = {
   outlineStrength: 0.42,
 };
 
-/** Purplish Slice City palette — sky / fog / grade (pic 2 vibe). */
+/** Purplish Catoshi palette — sky / fog / grade (pic 2 vibe). */
 export const CITY_PALETTE = {
   day:   { top: 0x6a5aad, mid: 0xb89ad4, bot: 0xf0d4e8 },
   dusk:  { top: 0x3a2a6a, mid: 0xc86a9a, bot: 0xf0a878 },

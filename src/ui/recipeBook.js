@@ -83,6 +83,11 @@ const CSS = `
 .spr-list .sp-item .sp-meta{ font-variant-numeric:tabular-nums; }
 
 @media (max-width:820px){ .spr-body{ grid-template-columns:180px 1fr; } }
+/* Below ~600px two columns leave neither one readable. Stack them and let the
+   list take a fixed slice off the top, so the detail pane still gets height. */
+@media (max-width:600px){
+  .spr-body{ grid-template-columns:1fr; grid-template-rows:minmax(110px, 34%) 1fr; }
+}
 `;
 
 function styleOnce() {

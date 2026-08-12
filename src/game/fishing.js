@@ -14,6 +14,13 @@
 import { EV } from './bus.js';
 import * as UI from '../ui/kit.js';
 import { ingredient, ingredientAvailable } from '../data/ingredients.js';
+import { IS_TOUCH } from '../engine/device.js';
+
+// The whole mini-game is "one button": tap to cast, tap to hook, hold to reel.
+// On touch that button is the screen, so the prompts have to say so.
+const T = IS_TOUCH
+  ? { tap: 'Tap', TAP: 'TAP', hold: 'Hold', quit: '✕ Pack up' }
+  : { tap: 'Press SPACE', TAP: 'SPACE', hold: 'Hold SPACE', quit: 'Esc — pack up' };
 
 // ---------------------------------------------------------------------------
 // Tuning
@@ -157,9 +164,26 @@ const FX_CSS = `
   padding:10px 16px; display:flex; flex-direction:column; align-items:center; gap:8px;
 }
 .spf-title{ font-size:13px; letter-spacing:.05em; text-transform:uppercase; color:#c8503f; }
-.spf-hint{ font-size:12px; color:#6d5a49; font-weight:700; }
+.spf-hint{ font-size:12px; color:#6d5a49; font-weight:700; text-align:center; }
 .spf-esc{ position:fixed; top:16px; right:18px; font-size:12px; color:#fff8ef;
-  background:rgba(43,33,26,.55); border-radius:999px; padding:5px 12px; }
+  background:rgba(43,33,26,.55); border-radius:999px; padding:5px 12px;
+  font-family:inherit; font-weight:800; border:0; cursor:pointer; }
+
+/* The tap/hold surface. It sits behind the card and the Esc chip (z-order by
+   document order), so it can cover the screen without swallowing either. */
+.spf-touch{ position:absolute; inset:0; display:none; touch-action:none; -webkit-tap-highlight-color:transparent; }
+@media (pointer:coarse){
+  .spf-touch{ display:block; pointer-events:auto; }
+  .spf-esc{ pointer-events:auto; padding:9px 16px; font-size:13px;
+    top:calc(env(safe-area-inset-top, 0px) + 12px); right:calc(env(safe-area-inset-right, 0px) + 12px); }
+}
+@media (max-width:700px){
+  .spf-root{ padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 28px); }
+  .spf-card{ max-width:calc(100vw - 24px); }
+  .spf-meter, .spf-bands{ width:min(280px, calc(100vw - 72px)); }
+  .spf-track, .spf-tension{ height:min(230px, 34svh); }
+  .spf-reel{ gap:14px; }
+}
 
 .spf-meter{ position:relative; width:280px; height:22px; border-radius:11px; overflow:hidden;
   background:linear-gradient(90deg,#8fb98a 0%,#8fb98a 40%,#e7c25f 40%,#e7c25f 75%,#d97b6c 75%,#d97b6c 100%);
@@ -450,9 +474,37 @@ export function createFishing(game) {
     const root = document.createElement('div');
     root.className = 'spf-root spf-hidden';
 
-    const esc = document.createElement('div');
+    // Touch equivalent of the Space key: press anywhere is "press Space",
+    // release is "release Space". The pointer is captured so a finger that
+    // slides off the surface mid-reel still delivers its release.
+    const touch = document.createElement('div');
+    touch.className = 'spf-touch';
+    touch.addEventListener('pointerdown', (e) => {
+      if (!session) return;
+      e.preventDefault();
+      touch.setPointerCapture?.(e.pointerId);
+      session.holding = true;
+      pressSpace();
+    });
+    const lift = (e) => {
+      if (!session) return;
+      try { touch.releasePointerCapture?.(e.pointerId); } catch { /* already gone */ }
+      session.holding = false;
+    };
+    touch.addEventListener('pointerup', lift);
+    touch.addEventListener('pointercancel', lift);
+
+    const esc = document.createElement('button');
+    esc.type = 'button';
     esc.className = 'spf-esc';
-    esc.textContent = 'Esc — pack up';
+    esc.textContent = T.quit;
+    esc.addEventListener('click', () => {
+      if (!session) return;
+      // Same rule as the Escape key: a finished catch is already banked, so
+      // skipping the celebration must still resolve with the real result.
+      if (session.phase === 'done') finish(session.result);
+      else abort();
+    });
 
     const card = document.createElement('div');
     card.className = 'spf-card';
@@ -538,11 +590,13 @@ export function createFishing(game) {
     resMeta.className = 'spf-hint';
     resultWrap.append(resIcon, resName, resMeta);
 
-    root.append(esc, card);
+    // Order matters: the touch surface is first so the card and the Esc button
+    // paint (and receive taps) on top of it.
+    root.append(touch, esc, card);
     document.body.append(root);
 
     dom = {
-      root, card, title, stage, hint,
+      root, touch, card, title, stage, hint,
       castWrap, needle,
       waitWrap, bobIcon,
       reelWrap, track, barEl, fishEl, tensionFill, ringFg, warn, CIRC,
@@ -667,7 +721,7 @@ export function createFishing(game) {
     if (dom) {
       dom.barEl.style.height = `${s.reel.barHalf * 2 * 100}%`;
       dom.warn.textContent = '';
-      dom.hint.textContent = 'Hold SPACE to lift the bar — keep the fish inside it';
+      dom.hint.textContent = `${T.hold} to lift the bar — keep the fish inside it`;
     }
     showStage(dom && dom.reelWrap);
   }
@@ -682,7 +736,7 @@ export function createFishing(game) {
     if (dom) {
       dom.title.textContent = s.spot.name;
       dom.hint.textContent = first
-        ? 'Wait for the bite… then press SPACE'
+        ? `Wait for the bite… then ${T.tap.toLowerCase()}`
         : 'It nosed the bait and left. Wait again…';
       dom.bobIcon.textContent = '🎣';
       dom.bobIcon.className = 'spf-bob';
@@ -697,7 +751,7 @@ export function createFishing(game) {
     if (dom) {
       dom.bobIcon.textContent = '❗';
       dom.bobIcon.className = 'spf-bang';
-      dom.hint.textContent = 'NOW — press SPACE!';
+      dom.hint.textContent = `NOW — ${T.TAP}!`;
     }
     sfx('bite');
     spawnRipple(1.4);
@@ -914,7 +968,7 @@ export function createFishing(game) {
       setOverlay(true);
       if (dom) {
         dom.title.textContent = spot.name || 'Fishing';
-        dom.hint.textContent = spot.blurb || 'Press SPACE to set the cast';
+        dom.hint.textContent = spot.blurb || `${T.tap} to set the cast`;
         showStage(dom.castWrap);
         dom.resultWrap.classList.remove('spf-rare');
       }

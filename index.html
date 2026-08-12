@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <link rel="icon" type="image/png" href="/favicon.png" />
 <link rel="apple-touch-icon" href="/brand/catoshi-logo.jpg" />
-<title>CATOSHI — Blue cat. Neon knives. Slice City.</title>
+<title>CATOSHI — Blue cat. Neon knives. Catoshi.</title>
 <link rel="stylesheet" href="/src/landing/landing.css" />
 <style>
   :root { color-scheme: dark; }
@@ -16,6 +16,11 @@
     font-family: "Plus Jakarta Sans", "Hiragino Maru Gothic ProN", system-ui, sans-serif;
     color: #f8f0ff;
     -webkit-font-smoothing: antialiased;
+    /* Nothing here is a scrollable document: the landing owns its own scroller
+       and the game is a fixed canvas. Stop the whole page rubber-banding. */
+    overscroll-behavior: none;
+    /* Kills the 300ms double-tap-to-zoom delay without blocking pinch zoom. */
+    touch-action: manipulation;
   }
   #app { position: fixed; inset: 0; }
   #app canvas { display: block; width: 100%; height: 100%; touch-action: none; }
@@ -25,6 +30,8 @@
     position: fixed; inset: 0; z-index: 100;
     display: none; flex-direction: column; align-items: center; justify-content: center;
     gap: 18px; text-align: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 18px
+             calc(env(safe-area-inset-bottom, 0px) + 20px);
     background: radial-gradient(120% 90% at 50% 8%, #4a2878 0%, #2a1450 42%, #12081f 100%);
     transition: opacity .5s ease;
   }
@@ -45,7 +52,7 @@
   #start .btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
   #start button {
     font-family: inherit; font-weight: 800; font-size: 16px;
-    padding: 12px 30px; border-radius: 16px; cursor: pointer;
+    padding: 14px 30px; min-height: 50px; border-radius: 16px; cursor: pointer;
     border: 1px solid rgba(255,255,255,.18);
     background: rgba(255,255,255,.08); color: #fff;
     transition: transform .08s, filter .12s;
@@ -83,15 +90,32 @@
         <a class="lp-btn lp-btn-x" data-twitter title="X / Twitter" aria-label="X">𝕏</a>
         <button type="button" class="lp-btn lp-btn-buy" data-buy-coin>Buy Coin</button>
         <button type="button" class="lp-btn lp-btn-primary" data-play-now>Play Now</button>
+        <button type="button" class="lp-nav-toggle" data-nav-toggle
+                aria-label="Menu" aria-expanded="false" aria-controls="lp-drawer">
+          <span class="bars"></span>
+        </button>
       </div>
     </nav>
 
+    <!-- Mobile nav destinations. Hidden above 900px; the toggle above opens it. -->
+    <div class="lp-drawer" id="lp-drawer">
+      <button type="button" data-page="lore">Lore</button>
+      <button type="button" data-page="earn">How to earn</button>
+      <button type="button" data-page="tokenomics">Tokenomics</button>
+      <button type="button" data-page="whitepaper">Whitepaper</button>
+      <div class="lp-drawer-foot">
+        <span class="lp-online"><span class="dot"></span><span data-online-count>796 players online</span></span>
+        <button type="button" class="lp-btn lp-btn-buy" data-buy-coin>Buy Coin</button>
+        <a class="lp-btn lp-btn-x" data-twitter title="X / Twitter" aria-label="X">𝕏</a>
+      </div>
+    </div>
+
     <div id="lp-main">
       <main class="flow-main" aria-label="CATOSHI story">
-        <!-- 01 Hero -->
-        <section data-flow-section aria-label="Hero" style="background: linear-gradient(165deg,#1a0a30 0%,#3a1468 45%,#6b2d8a 100%); color:#fff;">
+        <!-- 01 Hero — city photo background, solid CTAs above Read more -->
+        <section data-flow-section class="lp-hero" aria-label="Hero">
           <div class="flow-art-container">
-            <p class="flow-kicker">01 — Slice City</p>
+            <p class="flow-kicker">01 — Catoshi</p>
             <hr class="flow-rule" />
             <div>
               <h1 class="flow-title">CATOSHI<br>Runs<br>The<br>Night</h1>
@@ -100,35 +124,100 @@
             <p class="flow-lead">
               A blue chef-cat with a white headband. A purplish neon city. One sushi stall that could change everything.
             </p>
+            <!-- Play Now / Buy Coin / CA — above Read more -->
+            <div class="lp-cta-panel">
+              <div class="lp-hero-actions lp-cta-buttons">
+                <button type="button" class="lp-btn lp-btn-primary lp-btn-xl" data-play-now>Play Now</button>
+                <a class="lp-btn lp-btn-buy lp-btn-xl" data-buy-coin href="https://pump.fun" target="_blank" rel="noopener noreferrer">Buy Coin</a>
+                <a class="lp-btn lp-btn-x" data-twitter title="X / Twitter" aria-label="X">𝕏</a>
+              </div>
+              <div class="lp-ca-section">
+                <div class="lp-ca-head">
+                  <span class="lp-ca-title">Contract Address</span>
+                  <span class="lp-ca-hint">Tap to copy · always verify before buying</span>
+                </div>
+                <button type="button" class="lp-ca lp-ca-bar" data-copy-ca title="Copy contract address">
+                  <span class="ca-label">CA</span>
+                  <span class="ca-addr">…</span>
+                  <span class="ca-act">Copy</span>
+                </button>
+              </div>
+            </div>
             <button type="button" class="flow-more" data-read-more="hero">Read more</button>
             <div class="flow-full" data-full="hero">
-              CATOSHI is a cozy semi-open-world browser game: buy ingredients, cook perfect plates, serve hungry cats, and grow your stall from street cart to legendary destination — all in Slice City after dark.
+              CATOSHI is a cozy semi-open-world browser game: buy ingredients, cook perfect plates, serve hungry cats, and grow your stall from street cart to legendary destination — all in Catoshi after dark.
             </div>
-            <div class="lp-hero-actions">
-              <button type="button" class="lp-btn lp-btn-primary" data-play-now>Play Now</button>
-              <button type="button" class="lp-btn lp-btn-buy" data-buy-coin>Buy Coin</button>
-              <button type="button" class="lp-ca" data-copy-ca title="Copy contract address">
-                <span class="ca-label">CA</span>
-                <span class="ca-addr">…</span>
-                <span class="ca-act">Copy</span>
-              </button>
-              <a class="lp-btn lp-btn-x" data-twitter title="X / Twitter">𝕏</a>
+            <!-- Big hero sushi — follows cursor -->
+            <div class="lp-big-sushi" role="img" aria-label="Interactive sushi" title="Drag me around">
+              <div class="lp-big-sushi-float">
+                <div class="lp-big-sushi-glow"></div>
+                <svg class="lp-big-sushi-svg" viewBox="0 0 420 340" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <defs>
+                    <filter id="sushi-soft" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="b"/>
+                      <feOffset dy="6" result="o"/>
+                      <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+                      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                  </defs>
+                  <ellipse cx="210" cy="268" rx="168" ry="42" fill="#e8dcf5" opacity="0.95"/>
+                  <ellipse cx="210" cy="262" rx="148" ry="32" fill="none" stroke="rgba(139,92,246,0.35)" stroke-width="3"/>
+                  <ellipse cx="210" cy="262" rx="118" ry="22" fill="none" stroke="rgba(255,122,154,0.25)" stroke-width="1.5"/>
+                  <g filter="url(#sushi-soft)">
+                    <ellipse cx="210" cy="210" rx="92" ry="48" fill="#f5e6c8"/>
+                    <ellipse cx="210" cy="198" rx="88" ry="40" fill="#fffaf5" opacity="0.55"/>
+                    <g fill="rgba(220,190,140,0.45)">
+                      <ellipse cx="170" cy="200" rx="5" ry="2.2" transform="rotate(-18 170 200)"/>
+                      <ellipse cx="195" cy="215" rx="5" ry="2.2" transform="rotate(12 195 215)"/>
+                      <ellipse cx="230" cy="205" rx="5" ry="2.2" transform="rotate(-8 230 205)"/>
+                      <ellipse cx="250" cy="218" rx="4.5" ry="2" transform="rotate(22 250 218)"/>
+                      <ellipse cx="185" cy="225" rx="4.5" ry="2" transform="rotate(-5 185 225)"/>
+                      <ellipse cx="220" cy="228" rx="5" ry="2.2" transform="rotate(15 220 228)"/>
+                    </g>
+                    <path d="M118 168
+                      C130 118, 180 98, 210 96
+                      C250 94, 300 112, 310 155
+                      C318 180, 300 198, 270 205
+                      C240 214, 180 214, 145 200
+                      C125 190, 112 180, 118 168Z"
+                      fill="#e85a3a"/>
+                    <g stroke="rgba(255,230,200,0.55)" stroke-width="3.5" stroke-linecap="round" fill="none">
+                      <path d="M145 175 C175 155, 220 145, 280 158"/>
+                      <path d="M150 188 C185 170, 230 162, 285 175"/>
+                      <path d="M158 200 C195 185, 240 180, 275 192"/>
+                    </g>
+                    <ellipse cx="195" cy="125" rx="48" ry="18" fill="rgba(255,255,255,0.28)" transform="rotate(-12 195 125)"/>
+                    <ellipse cx="132" cy="240" rx="14" ry="10" fill="#7ec850" opacity="0.9"/>
+                    <ellipse cx="128" cy="237" rx="6" ry="4" fill="#a8e070" opacity="0.7"/>
+                    <path d="M278 238 Q290 228 302 238 Q290 248 278 238" fill="#ffb0c0"/>
+                    <path d="M288 244 Q300 234 312 246 Q300 254 288 244" fill="#ff9ab0"/>
+                  </g>
+                  <g class="lp-sushi-maki">
+                    <g transform="translate(340 95) scale(0.85)">
+                      <ellipse cx="0" cy="8" rx="28" ry="12" fill="#1a0a20" opacity="0.25"/>
+                      <circle cx="0" cy="0" r="26" fill="#1e2a1a"/>
+                      <circle cx="0" cy="0" r="18" fill="#f5e8c8"/>
+                      <circle cx="0" cy="0" r="8" fill="#e8724f"/>
+                      <circle cx="-5" cy="-3" r="3" fill="#7ec850"/>
+                    </g>
+                  </g>
+                </svg>
+              </div>
             </div>
-            <img class="lp-hero-art" src="/brand/hero-city.png" alt="CATOSHI Tokyo Kitchen in neon Slice City" />
           </div>
         </section>
 
         <!-- 02 Lore teaser -->
         <section data-flow-section aria-label="Lore" style="background:#0a0614; color:#fff;">
           <div class="flow-art-container">
-            <p class="flow-kicker">02 — What is Slice City</p>
+            <p class="flow-kicker">02 — What is Catoshi</p>
             <hr class="flow-rule" />
             <div><h2 class="flow-title">Neon<br>Alleys.<br>Hot<br>Rice.</h2></div>
             <hr class="flow-rule" />
             <p class="flow-lead">A Japanese-inspired night city of market lanes, harbor docks, and a food street that never sleeps.</p>
             <button type="button" class="flow-more" data-read-more="slice">Read more</button>
             <div class="flow-full" data-full="slice">
-              Slice City is the playground: Old Market, Harbor, Downtown, Suburbs, and the Festival strip. Unlock districts as your reputation climbs. Master Kuro waits in the market — the rest is up to your paws.
+              Catoshi is the playground: Old Market, Harbor, Downtown, Suburbs, and the Festival strip. Unlock districts as your reputation climbs. Master Kuro waits in the market — the rest is up to your paws.
             </div>
             <button type="button" class="lp-btn" data-page="lore">Full lore →</button>
           </div>
@@ -206,8 +295,8 @@
     <!-- Subpages (nav owns these; main scroll sections stay above) -->
     <section id="page-lore" class="lp-page" style="background:#12081f">
       <button type="button" class="back" data-back-main>← Back to home</button>
-      <h1>Lore — What is Slice City?</h1>
-      <p>Slice City is a semi-open night metropolis where cats cook, trade, and chase reputation under purple neon. Alleys hum with lantern light. The harbor smells like soy and salt. Downtown never blinks.</p>
+      <h1>Lore — What is Catoshi?</h1>
+      <p>Catoshi is a semi-open night metropolis where cats cook, trade, and chase reputation under purple neon. Alleys hum with lantern light. The harbor smells like soy and salt. Downtown never blinks.</p>
       <h2>The blue chef</h2>
       <p>CATOSHI is a street cat who stood up, tied a white headband, and decided sushi was destiny. Master Kuro still teaches in the market. The rest of the city watches to see if the stall makes it.</p>
       <h2>Districts</h2>
@@ -308,7 +397,7 @@
       <p class="wg-err"></p>
       <div class="wg-actions">
         <button type="button" class="lp-btn" data-wg-cancel>Cancel</button>
-        <button type="button" class="lp-btn lp-btn-primary" data-wg-connect>Enter Slice City</button>
+        <button type="button" class="lp-btn lp-btn-primary" data-wg-connect>Enter Catoshi</button>
       </div>
     </div>
   </div>
@@ -317,7 +406,7 @@
   <div id="start">
     <div class="mark"><img src="/brand/catoshi-logo.jpg" alt="CATOSHI" /></div>
     <h1>CATOSHI</h1>
-    <div class="tag">Blue cat. Neon knives. Slice City.</div>
+    <div class="tag">Blue cat. Neon knives. Catoshi.</div>
     <div class="loading">Warming the rice…</div>
     <p class="start-error"></p>
     <div class="btns">
@@ -356,7 +445,10 @@
       <div id="lb-list"></div>
     </div>
     <div id="chat" class="panel">
-      <div class="head">Chat <span class="sub">Enter to talk</span></div>
+      <div class="head">
+        Chat <span class="sub">Enter to talk</span>
+        <button type="button" id="chat-close" aria-label="Close chat">✕</button>
+      </div>
       <div id="chat-feed"></div>
       <form id="chat-form">
         <input id="chat-input" type="text" maxlength="140" placeholder="Say something…" autocomplete="off" />

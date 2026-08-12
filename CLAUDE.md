@@ -6,6 +6,8 @@ Japanese-inspired city. Built on the `ENGINE CITY` base.
 ## Run
 `npm install` then `npm run dev`. Build with `npm run build`.
 Test with `npm run build && node tools/smoke.mjs` — it must print ALL CHECKS PASSED.
+`node tools/mobile.mjs` is the same game at three phone viewports, driven by
+touch; it must print MOBILE LAYOUT OK. Add `--shots` to keep screenshots.
 
 ## Architecture rules
 - Systems are factories `createX(game)` returning `{ update(dt), … }`. They talk
