@@ -20,7 +20,7 @@ gsap.registerPlugin(ScrollTrigger);
 const PIN_MIN_WIDTH = 821;
 const canPin = () => typeof window !== 'undefined' && window.innerWidth >= PIN_MIN_WIDTH;
 
-const BUY = GAME.robinhoodUrl || 'https://robinhood.com/crypto';
+const BUY = GAME.robinhoodUrl || 'https://www.sushi.com/robinhood/launchpad/token/0x4af955ec23941363FAcD33A9562C611f2cBAC68b';
 const TWITTER = GAME.twitterUrl || 'https://x.com/catoshi';
 const CA = GAME.ca || '';
 
