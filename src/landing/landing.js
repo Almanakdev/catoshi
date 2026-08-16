@@ -20,7 +20,7 @@ gsap.registerPlugin(ScrollTrigger);
 const PIN_MIN_WIDTH = 821;
 const canPin = () => typeof window !== 'undefined' && window.innerWidth >= PIN_MIN_WIDTH;
 
-const PUMP = GAME.pumpfunUrl || 'https://pump.fun';
+const BUY = GAME.robinhoodUrl || 'https://robinhood.com/crypto';
 const TWITTER = GAME.twitterUrl || 'https://x.com/catoshi';
 const CA = GAME.ca || '';
 
@@ -166,16 +166,16 @@ function wireReadMore(root) {
 
 function wireBuyButtons(root) {
   root.querySelectorAll('[data-buy-coin]').forEach((btn) => {
-    // Anchors keep a real pump.fun href; buttons open the same URL.
+    // Anchors keep a real Robinhood href; buttons open the same URL.
     if (btn.tagName === 'A') {
-      btn.setAttribute('href', PUMP);
+      btn.setAttribute('href', BUY);
       btn.setAttribute('target', '_blank');
       btn.setAttribute('rel', 'noopener noreferrer');
     }
     btn.addEventListener('click', (e) => {
       if (btn.tagName === 'A') return; // native navigation
       e.preventDefault();
-      window.open(PUMP, '_blank', 'noopener,noreferrer');
+      window.open(BUY, '_blank', 'noopener,noreferrer');
     });
   });
 }
@@ -352,10 +352,10 @@ function wireCopyCa(root) {
 }
 
 function fakeWalletAddress(provider) {
-  const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let s = provider === 'demo' ? 'Demo' : '';
-  while (s.length < 44) s += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return s.slice(0, 44);
+  const hex = '0123456789abcdef';
+  let s = provider === 'demo' ? '0xde10' : '0x';
+  while (s.length < 42) s += hex[Math.floor(Math.random() * hex.length)];
+  return s.slice(0, 42);
 }
 
 /**

@@ -5,9 +5,9 @@ export const GAME = {
   tagline: 'Blue cat. Neon knives. Catoshi.',
   build: '0.5.0-catoshi',
   /** Contract address shown on the landing page (copy CA). Update when live. */
-  ca: 'CATOSHi1111111111111111111111111111111111',
+  ca: '0xCA70541111111111111111111111111111111111',
   /** All "Buy Coin" buttons open this. */
-  pumpfunUrl: 'https://pump.fun',
+  robinhoodUrl: 'https://robinhood.com/crypto',
   twitterUrl: 'https://x.com/catoshi',
   sessionKey: 'catoshi:session',
 };

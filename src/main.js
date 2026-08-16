@@ -583,7 +583,7 @@ function wireGameChrome() {
     btn.dataset.boundBuy = '1';
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      window.open(GAME.pumpfunUrl || 'https://pump.fun', '_blank', 'noopener,noreferrer');
+      window.open(GAME.robinhoodUrl || 'https://robinhood.com/crypto', '_blank', 'noopener,noreferrer');
     });
   });
 }

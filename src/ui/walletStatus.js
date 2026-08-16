@@ -4,7 +4,7 @@ import { GAME } from '../config.js';
 
 const PROVIDER_LABEL = {
   phantom: 'Phantom',
-  solflare: 'Solflare',
+  trust: 'Trust Wallet',
   demo: 'Demo Wallet',
 };
 

@@ -6,7 +6,7 @@ import { isTypingInUI } from '../engine/inputGuard.js';
 const CHATTER = [
   'best salmon in Catoshi rn', 'anyone at the market?', 'CATOSHI to the moon 🍣',
   'gg', 'master kuro is goated', 'who just meowed at me',
-  'first time here, city is huge', 'buy $CATOSHI on pumpfun', 'lost downtown again',
+  'first time here, city is huge', 'buy $CATOSHI on robinhood', 'lost downtown again',
   'that neon street tho 🔥', 'meet at the harbor?', 'cooking a perfect roll',
   'press E at the stall', 'ty!', 'the lanterns at night slap',
   'sprinting everywhere is the only way', 'my fps is finally stable',
