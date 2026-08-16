@@ -364,7 +364,7 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
   margin-top: 8px;
 }
 
-/* Main landing CTA panel: Play Now + Buy Coin, CA bar below */
+/* Main landing CTA panel: Play Now + Buy Coin */
 .lp-cta-panel {
   position: relative;
   z-index: 5;
@@ -407,96 +407,6 @@ a.lp-btn-buy {
   text-decoration: none;
   color: #fff;
 }
-.lp-ca-section {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px 14px;
-  border-radius: 16px;
-  background: rgba(12, 6, 22, 0.82);
-  border: 1px solid var(--c-line);
-  box-shadow: none;
-}
-.lp-ca-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px 12px;
-}
-.lp-ca-title {
-  font: 800 11px/1 var(--font-sans);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--c-pink);
-}
-.lp-ca-hint {
-  font: 600 11px/1.2 var(--font-sans);
-  color: var(--c-muted);
-}
-.lp-ca {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: rgba(0,0,0,0.28);
-  border: 1px solid var(--c-line);
-  font: 700 12px/1.2 ui-monospace, monospace;
-  cursor: pointer;
-  color: inherit;
-}
-.lp-ca:hover { border-color: var(--c-pink); }
-.lp-ca .ca-label { opacity: 0.6; text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; }
-.lp-ca .ca-act { color: var(--c-pink); font-weight: 800; }
-/* Full-width CA bar under the main buttons */
-.lp-ca-bar {
-  width: 100%;
-  box-sizing: border-box;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #1a0c2e;
-  border: 1px solid #ff7a9a;
-  font-size: 13px;
-  text-align: left;
-  transition: border-color .12s, background .12s;
-}
-.lp-ca-bar:hover {
-  border-color: #fff;
-  background: #241038;
-  box-shadow: none;
-}
-.lp-ca-bar .ca-addr {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-.lp-ca-bar .ca-act {
-  flex-shrink: 0;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #ff7a9a;
-  color: #fff;
-  font: 800 11px/1 var(--font-sans);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.lp-ca-bar:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-.lp-ca-bar:disabled .ca-act {
-  background: #4a3a5a;
-  color: var(--c-muted);
-}
-
 /* ---------- Subpages (nav destinations) ---------- */
 .lp-page {
   display: none;
@@ -993,9 +903,6 @@ a.lp-btn-buy {
   .lp-big-sushi { display: none; }
   .lp-cta-buttons { flex-direction: column; align-items: stretch; gap: 10px; }
   .lp-cta-buttons .lp-btn-x { align-self: flex-start; }
-  .lp-ca-head { flex-direction: column; gap: 2px; }
-  .lp-ca-bar { font-size: 11.5px; padding: 11px 12px; gap: 8px; }
-  .lp-ca-bar .ca-act { padding: 6px 10px; font-size: 10px; }
   .lp-hero-actions .lp-btn { flex: 1 1 auto; justify-content: center; }
 }
 

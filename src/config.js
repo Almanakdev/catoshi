@@ -4,8 +4,6 @@ export const GAME = {
   title: 'CATOSHI',
   tagline: 'Blue cat. Neon knives. Catoshi.',
   build: '0.5.0-catoshi',
-  /** Contract address shown on the landing page (copy CA). Update when live. */
-  ca: '0x4af955ec23941363facd33a9562c611f2cbac68b',
   /** All "Buy Coin" buttons open this. */
   robinhoodUrl: 'https://www.sushi.com/robinhood/launchpad/token/0x4af955ec23941363FAcD33A9562C611f2cBAC68b',
   twitterUrl: 'https://x.com/catoshi',
