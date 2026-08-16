@@ -3,7 +3,7 @@
 import { GAME } from '../config.js';
 
 const PROVIDER_LABEL = {
-  phantom: 'Phantom',
+  metamask: 'MetaMask',
   trust: 'Trust Wallet',
   demo: 'Demo Wallet',
 };
