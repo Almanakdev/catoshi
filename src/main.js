@@ -583,7 +583,7 @@ function wireGameChrome() {
     btn.dataset.boundBuy = '1';
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      window.open(GAME.robinhoodUrl || 'https://www.sushi.com/robinhood/launchpad/token/0x4af955ec23941363FAcD33A9562C611f2cBAC68b', '_blank', 'noopener,noreferrer');
+      window.open(GAME.buyUrl || GAME.robinhoodUrl || 'https://pools.trade/', '_blank', 'noopener,noreferrer');
     });
   });
 }

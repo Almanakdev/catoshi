@@ -20,8 +20,9 @@ gsap.registerPlugin(ScrollTrigger);
 const PIN_MIN_WIDTH = 821;
 const canPin = () => typeof window !== 'undefined' && window.innerWidth >= PIN_MIN_WIDTH;
 
-const BUY = GAME.robinhoodUrl || 'https://www.sushi.com/robinhood/launchpad/token/0x4af955ec23941363FAcD33A9562C611f2cBAC68b';
+const BUY = GAME.buyUrl || GAME.robinhoodUrl || 'https://pools.trade/';
 const TWITTER = GAME.twitterUrl || 'https://x.com/catoshi';
+const CA = GAME.ca || '';
 
 function cx(...parts) {
   return parts.filter(Boolean).join(' ');
@@ -165,7 +166,7 @@ function wireReadMore(root) {
 
 function wireBuyButtons(root) {
   root.querySelectorAll('[data-buy-coin]').forEach((btn) => {
-    // Anchors keep a real Robinhood href; buttons open the same URL.
+    // Anchors keep a real buy href; buttons open the same URL.
     if (btn.tagName === 'A') {
       btn.setAttribute('href', BUY);
       btn.setAttribute('target', '_blank');
@@ -314,6 +315,41 @@ function wireInteractiveSushi(root) {
   };
 }
 
+function wireCopyCa(root) {
+  root.querySelectorAll('[data-copy-ca]').forEach((btn) => {
+    const act = btn.querySelector('.ca-act');
+    const addr = btn.querySelector('.ca-addr');
+    const isBar = btn.classList.contains('lp-ca-bar');
+    if (addr) {
+      if (!CA) {
+        addr.textContent = 'Coming soon';
+      } else if (isBar) {
+        addr.textContent = CA;
+        addr.title = CA;
+      } else {
+        addr.textContent = CA.length > 16 ? `${CA.slice(0, 6)}…${CA.slice(-4)}` : CA;
+      }
+    }
+    if (!CA) {
+      btn.disabled = true;
+      if (act) act.textContent = 'Soon';
+      return;
+    }
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(CA);
+        if (act) {
+          const prev = act.textContent;
+          act.textContent = 'Copied!';
+          setTimeout(() => { act.textContent = prev || 'Copy'; }, 1400);
+        }
+      } catch {
+        if (act) act.textContent = 'Select & copy';
+      }
+    });
+  });
+}
+
 function fakeWalletAddress(provider) {
   const hex = '0123456789abcdef';
   let s = provider === 'demo' ? '0xde10' : '0x';
@@ -349,6 +385,7 @@ export function createLanding(opts = {}) {
 
   wireReadMore(root);
   wireBuyButtons(root);
+  wireCopyCa(root);
 
   // Twitter
   root.querySelectorAll('[data-twitter]').forEach((a) => {

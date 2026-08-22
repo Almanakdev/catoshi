@@ -5,8 +5,10 @@ export const GAME = {
   tagline: 'Blue cat. Neon knives. Oshicat.',
   ticker: '$OSHICAT',
   build: '0.5.0-oshicat',
+  /** Contract address shown on the landing page (copy CA). */
+  ca: '0x90001b07f784d83e0b4bc8a50ba2a6795af93d8e',
   /** All "Buy Coin" buttons open this. */
-  robinhoodUrl: 'https://www.sushi.com/robinhood/launchpad/token/0x4af955ec23941363FAcD33A9562C611f2cBAC68b',
+  buyUrl: 'https://pools.trade/',
   twitterUrl: 'https://x.com/catoshi',
   sessionKey: 'catoshi:session',
 };
