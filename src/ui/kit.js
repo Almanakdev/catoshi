@@ -8,18 +8,18 @@
 let injected = false;
 
 export const THEME = {
-  cream: '#f8f0ff',
-  creamDeep: '#e8d8f8',
-  ink: '#1e1230',
-  inkSoft: '#5a4a6a',
-  red: '#c45a9a',
-  redSoft: '#ff7a9a',
+  cream: '#fff6f8',
+  creamDeep: '#f8d4e0',
+  ink: '#2a121c',
+  inkSoft: '#7a4a58',
+  red: '#d45a7a',
+  redSoft: '#f4a1b5',
   gold: '#f0b93f',
-  green: '#7ea36a',
+  green: '#3ad414',
   blue: '#6b7fd7',
-  pink: '#ff7a9a',
-  wood: '#a3764c',
-  shadow: 'rgba(40, 20, 60, 0.28)',
+  pink: '#f4a1b5',
+  wood: '#6a3a44',
+  shadow: 'rgba(42, 18, 28, 0.28)',
 };
 
 const CSS = `
@@ -73,8 +73,8 @@ const CSS = `
 .sp-btn:hover{ filter:brightness(1.04); }
 .sp-btn:active{ transform:translateY(2px); box-shadow:0 1px 0 rgba(59,47,38,.16); }
 .sp-btn[disabled]{ opacity:.45; cursor:not-allowed; box-shadow:none; }
-.sp-btn.sp-primary{ background:linear-gradient(180deg,#e07a63,var(--sp-red)); color:#fff8ef; border-color:rgba(0,0,0,.12); }
-.sp-btn.sp-good{ background:linear-gradient(180deg,#94bd80,var(--sp-green)); color:#fff; border-color:rgba(0,0,0,.12); }
+.sp-btn.sp-primary{ background:linear-gradient(180deg,#f07a9a,var(--sp-red)); color:#fff8ef; border-color:rgba(0,0,0,.12); }
+.sp-btn.sp-good{ background:linear-gradient(180deg,#7aef4a,var(--sp-green)); color:#142010; border-color:rgba(0,0,0,.12); }
 .sp-btn.sp-ghost{ background:rgba(255,255,255,.4); box-shadow:none; }
 
 .sp-row{ display:flex; align-items:center; gap:8px; }

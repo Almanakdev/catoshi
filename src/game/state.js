@@ -1,4 +1,4 @@
-// Central, fully serialisable game state for Catushi.
+// Central, fully serialisable game state for Oshicat.
 //
 // Rules:
 //  - `state.data` is a plain JSON-safe object. Nothing in here may hold a

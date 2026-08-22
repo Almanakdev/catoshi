@@ -4,9 +4,9 @@
 import { isTypingInUI } from '../engine/inputGuard.js';
 
 const CHATTER = [
-  'best salmon in Catoshi rn', 'anyone at the market?', 'CATOSHI to the moon 🍣',
+  'best salmon in Oshicat rn', 'anyone at the market?', 'OSHICAT to the moon 🍣',
   'gg', 'master kuro is goated', 'who just meowed at me',
-  'first time here, city is huge', 'buy $CATOSHI on robinhood', 'lost downtown again',
+  'first time here, city is huge', 'buy $OSHICAT on robinhood', 'lost downtown again',
   'that neon street tho 🔥', 'meet at the harbor?', 'cooking a perfect roll',
   'press E at the stall', 'ty!', 'the lanterns at night slap',
   'sprinting everywhere is the only way', 'my fps is finally stable',
@@ -18,7 +18,7 @@ const CHATTER = [
   'the purple sky hits different', 'ok who is on the leaderboard',
 ];
 
-const JOIN_LINES = ['joined Catoshi', 'connected', 'is exploring the alleys'];
+const JOIN_LINES = ['joined Oshicat', 'connected', 'is exploring the alleys'];
 
 function nameColor(name) {
   let h = 0;
@@ -174,7 +174,7 @@ export function createSocialUI(opts = {}) {
   function show() {
     root.classList.add('show');
     renderBoard();
-    post('Server', 'Welcome to Catoshi. Press Enter to chat.', 'sys');
+    post('Server', 'Welcome to Oshicat. Press Enter to chat.', 'sys');
   }
   function hide() { root.classList.remove('show'); root.classList.remove('chat-open'); }
 

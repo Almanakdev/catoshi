@@ -1,4 +1,4 @@
-# Catushi — runtime contracts
+# Oshicat — runtime contracts
 
 Every gameplay system is a factory `createX(game, opts)` returning an object
 with (at minimum) `update(dt)`. `main.js` owns construction order and the frame

@@ -1,4 +1,4 @@
-# Catushi
+# Oshicat
 
 **From street cat to sushi legend.**
 

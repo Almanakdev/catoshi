@@ -31,7 +31,7 @@ const CSS = `
 .sph-root.sph-off *{ pointer-events:none !important; }
 
 .sph-card{
-  background:linear-gradient(180deg,rgba(251,243,226,.95),rgba(242,228,200,.95));
+  background:linear-gradient(180deg,rgba(255,246,248,.95),rgba(248,212,224,.95));
   border:2px solid rgba(59,47,38,.16); border-radius:14px;
   box-shadow:0 6px 16px var(--sp-shadow), inset 0 1px 0 rgba(255,255,255,.6);
   padding:8px 10px;

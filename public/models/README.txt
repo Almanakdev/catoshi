@@ -1,4 +1,4 @@
-Catushi — drop-in cat models
+Oshicat — drop-in cat models
 ==============================
 
 By default the game builds its cat PROCEDURALLY from the primitives in

@@ -23,7 +23,8 @@ const BASE = `http://localhost:${PORT}`;
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.glb': 'model/gltf-binary', '.vrm': 'application/octet-stream',
-  '.png': 'image/png', '.txt': 'text/plain', '.fbx': 'application/octet-stream',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.txt': 'text/plain', '.fbx': 'application/octet-stream',
 };
 
 function serve() {

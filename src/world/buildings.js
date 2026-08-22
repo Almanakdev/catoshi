@@ -266,13 +266,13 @@ const JP_FONT = '"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto S
  * recognisable as it grows: a cream paper panel in a timber frame, a muted-red
  * disc bearing 寿, two little cat ears, and the name.
  */
-export function makeSushiSign({ vertical = true, name = 'CATOSHI' } = {}) {
+export function makeSushiSign({ vertical = true, name = 'OSHICAT' } = {}) {
   const W = vertical ? 128 : 384;
   const H = vertical ? 384 : 112;
   const canvas = makeCanvas(W, H);
   const ctx = canvas.getContext('2d');
-  // Neon-purple brand board (Catoshi / pic 3 stall vibe).
-  const PURPLE = '#6b2d8a', CREAM = '#f8e8d0', FRAME = '#3a1848', NEON = '#ff7a9a';
+  // Neon-purple brand board (Oshicat / pic 3 stall vibe).
+  const PURPLE = '#6b2d5a', CREAM = '#f8e8d0', FRAME = '#3a1848', NEON = '#3ae014';
 
   ctx.fillStyle = FRAME; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = CREAM; ctx.fillRect(9, 9, W - 18, H - 18);
@@ -1315,7 +1315,7 @@ export function buildFishMarketHall() {
  */
 export function buildSushiShop(tier = 1) {
   const t = Math.max(1, Math.min(5, Math.round(tier)));
-  // CATOSHI stall palette — warm timber + lantern reds on purple-city nights (pic 3).
+  // OSHICAT stall palette — warm timber + lantern reds on purple-city nights (pic 3).
   const RED = '#d94a3a', REDD = '#8f2a2c', CREAM = '#f2e3c2';
   const WOOD = '#6b3f2a', WOODD = '#4a2a1a', PURPLE = '#6b2d8a';
   const s = [];
@@ -1381,14 +1381,14 @@ export function buildSushiShop(tier = 1) {
     }
     g.push(box(w - 0.2, 0.12, d - 0.2, 0, 2.85, -0.1, P.paperWarm));
     g.push(box(1.45, 0.28, 0.48, -0.85, 2.0, -0.25, P.paperWarm));
-    // Noren under the eaves + CATOSHI sign
+    // Noren under the eaves + OSHICAT sign
     s.push(...noren(w * 0.55, 0.55, 0, 2.7, -hd + 0.2, { color: PURPLE, band: CREAM, panels: 3 }));
     s.push(box(2.15, 0.55, 0.1, 0, 2.35, hd + 0.22, WOODD));
 
     return {
       structure: merge(s), glow: merge(g), neon: merge(neon),
       sign: { x: 0, y: 2.35, z: hd + 0.28, w: 2.0, h: 0.48 },
-      signTex: makeSushiSign({ vertical: false, name: 'CATOSHI' }),
+      signTex: makeSushiSign({ vertical: false, name: 'OSHICAT' }),
       steamAnchor: { x: 1.05, y: 2.1, z: -0.35 },
       door: { x: 0, z: hd + 1.0, yaw: 0 },
       counterAnchor: { x: 0.15, y: 1.62, z: -0.15 },

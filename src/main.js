@@ -1,4 +1,4 @@
-// Catushi — entry point.
+// Oshicat — entry point.
 //
 // This file owns three things and nothing else:
 //   1. the renderer / scene / sky / lighting / post stack,
@@ -757,12 +757,13 @@ function logStats() {
 // Read-only in spirit — nothing in the game reads back off it.
 window.__sushi = game;
 window.__catoshi = game;
+window.__oshicat = game;
 
 // index.html ships a static placeholder; the real name lives in config.js.
 try { document.title = `${GAME.title} — ${GAME.tagline}`; } catch { /* non-DOM host */ }
 
 boot().then(() => {
-  console.info(`%c${GAME.title} %c${GAME.tagline}`, 'font-weight:bold', 'color:#8b5cf6');
+  console.info(`%c${GAME.title} %c${GAME.tagline}`, 'font-weight:bold', 'color:#3ae014');
   animate();
 }).catch((err) => {
   console.error('[main] boot failed', err);

@@ -1,4 +1,4 @@
-// Lightweight corner minimap for CATOSHI — adapts ROADS + world POIs without
+// Lightweight corner minimap for Oshicat — adapts ROADS + world POIs without
 // requiring ENGINE CITY's full road-graph payload.
 
 import { ROADS, DISTRICTS, HOME } from '../data/districts.js';
@@ -38,7 +38,7 @@ export function createSimpleMinimap(world) {
 
   const pois = (world && world.pois) ? world.pois.slice() : [];
   if (!pois.find((p) => p.id === 'home')) {
-    pois.push({ id: 'home', x: HOME.shop.x, z: HOME.shop.z, label: 'CATOSHI Stall', kind: 'shop' });
+    pois.push({ id: 'home', x: HOME.shop.x, z: HOME.shop.z, label: 'OSHICAT Stall', kind: 'shop' });
   }
 
   const cityAspect = (maxX - minX) / (maxZ - minZ);
@@ -135,8 +135,8 @@ export function createSimpleMinimap(world) {
     // Background
     ctx.clearRect(0, 0, CSS_W, CSS_H);
     const g = ctx.createLinearGradient(0, 0, 0, CSS_H);
-    g.addColorStop(0, '#2a1450');
-    g.addColorStop(1, '#12081f');
+    g.addColorStop(0, '#5a2a40');
+    g.addColorStop(1, '#2a121c');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, CSS_W, CSS_H);
 
@@ -170,8 +170,8 @@ export function createSimpleMinimap(world) {
 
     // POIs
     for (const p of pois) {
-      const isShop = p.kind === 'shop' || p.id === 'home' || /shop|stall|catoshi/i.test(p.label || '');
-      ctx.fillStyle = isShop ? '#ff7a9a' : '#a8d8ff';
+      const isShop = p.kind === 'shop' || p.id === 'home' || /shop|stall|catoshi|oshicat/i.test(p.label || '');
+      ctx.fillStyle = isShop ? '#3ae014' : '#f4a1b5';
       ctx.beginPath();
       ctx.arc(mx(p.x), my(p.z), isShop ? 4.5 : 3, 0, Math.PI * 2);
       ctx.fill();

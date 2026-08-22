@@ -1,9 +1,10 @@
 // Project-wide switches. Kept tiny and dependency-free so anything can import it.
 
 export const GAME = {
-  title: 'CATOSHI',
-  tagline: 'Blue cat. Neon knives. Catoshi.',
-  build: '0.5.0-catoshi',
+  title: 'OSHICAT',
+  tagline: 'Blue cat. Neon knives. Oshicat.',
+  ticker: '$OSHICAT',
+  build: '0.5.0-oshicat',
   /** All "Buy Coin" buttons open this. */
   robinhoodUrl: 'https://www.sushi.com/robinhood/launchpad/token/0x4af955ec23941363FAcD33A9562C611f2cBAC68b',
   twitterUrl: 'https://x.com/catoshi',
@@ -18,7 +19,7 @@ export const CAT_MODEL_URL = null;
 
 /**
  * Player cat look — also the fallback tint when no model is loaded.
- * Blue fur + white headband matches the CATOSHI brand art (pic 1).
+ * Blue fur + white headband matches the Oshicat brand art (pic 1).
  * `belly` is the chef coat, `accent` the headband / coat trim / apron ties.
  */
 export const PLAYER_CAT = {
@@ -67,23 +68,23 @@ export const RENDER = {
   shadowMapSize: 2048,
   fog: { near: 90, far: 340 },
   // Post-processing is opt-in per quality tier (see QUALITY below).
-  // Cool ink edge so the purplish night city stays crisp.
-  outlineColor: 0x2a1a3c,
+  // Cool ink edge so the sakura night city stays crisp.
+  outlineColor: 0x2a121c,
   outlineStrength: 0.42,
 };
 
-/** Purplish Catoshi palette — sky / fog / grade (pic 2 vibe). */
+/** Sakura-lantern Oshicat palette — sky / fog / grade. */
 export const CITY_PALETTE = {
-  day:   { top: 0x6a5aad, mid: 0xb89ad4, bot: 0xf0d4e8 },
-  dusk:  { top: 0x3a2a6a, mid: 0xc86a9a, bot: 0xf0a878 },
-  dawn:  { top: 0x7a6abe, mid: 0xe8b0d0, bot: 0xf8d8e8 },
-  night: { top: 0x12081f, mid: 0x2a1450, bot: 0x4a2878 },
-  fogDay: 0xb89ad4,
-  hemiDay: 0xd8c8f0,
-  hemiNight: 0x3a2868,
+  day:   { top: 0x7a5a8a, mid: 0xf0b0c8, bot: 0xf8d8e4 },
+  dusk:  { top: 0x4a1a38, mid: 0xe07898, bot: 0xf0a878 },
+  dawn:  { top: 0x8a6a9a, mid: 0xf0b8d0, bot: 0xf8dce8 },
+  night: { top: 0x1a0814, mid: 0x4a1838, bot: 0xc45a78 },
+  fogDay: 0xf0b0c8,
+  hemiDay: 0xf0d8e4,
+  hemiNight: 0x4a2840,
   sunDay: 0xffe8f0,
   sunDusk: 0xffb0c8,
-  ambient: 0xf0e8ff,
+  ambient: 0xfff0f4,
 };
 
 export const QUALITY = [

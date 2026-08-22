@@ -44,7 +44,7 @@ export const DISTRICTS = [
     center: { x: -34, z: 4 },
     half: { x: 24, z: 26 },
     ground: '#e6d7b6',
-    accent: '#8b5cf6',
+    accent: '#3ae014',
     music: 'market',
     ambience: 'market',
     unlock: { free: true },

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { paint, box, cyl, blob, merge } from '../engine/prim.js';
 
 // ---------------------------------------------------------------------------
-// Catushi — the player/NPC cat: an ANTHROPOMORPHIC chef who stands on two
+// Oshicat — the player/NPC cat: an ANTHROPOMORPHIC chef who stands on two
 // legs, built entirely from the prim.js helpers (zero external assets).
 //
 // Chibi-heroic proportions: 1.91 units tall (2.12 with the toque), which is

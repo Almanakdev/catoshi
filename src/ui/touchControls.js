@@ -84,7 +84,7 @@ const CSS = `
 }
 .tc-btn .tc-cap{ font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; opacity:.78; }
 .tc-btn.tc-press{ transform:scale(.93); background:rgba(255,122,154,.62); }
-.tc-btn.tc-on{ background:linear-gradient(180deg,#ff7a9a,#8b5cf6); border-color:transparent; }
+.tc-btn.tc-on{ background:linear-gradient(180deg,#3ae014,#1a9a10); border-color:transparent; color:#142010; }
 
 /* Interact: the big one, and the only one that ever disappears. */
 .tc-use{

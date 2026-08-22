@@ -9,7 +9,7 @@ const STORAGE_KEY = 'catoshi:shadow-tutorial-v1';
 const KEY_STEPS = [
   {
     id: 'welcome',
-    title: 'Welcome to Catoshi',
+    title: 'Welcome to Oshicat',
     body: 'A quick walkthrough. Follow the shadow cursor — or just try it yourself.',
     mode: 'pointer',
     advance: 'click',
@@ -75,7 +75,7 @@ const KEY_STEPS = [
 const TOUCH_STEPS = [
   {
     id: 'welcome',
-    title: 'Welcome to Catoshi',
+    title: 'Welcome to Oshicat',
     body: 'A quick tour of the controls. Tap Continue when you have tried each one.',
     mode: 'pointer',
     advance: 'click',

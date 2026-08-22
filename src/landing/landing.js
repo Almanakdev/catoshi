@@ -1,4 +1,4 @@
-// CATOSHI landing page — story-scroll flow + wallet gate + subpages.
+// Oshicat landing page — story-scroll flow + wallet gate + subpages.
 // Vanilla JS + GSAP (project is not React/shadcn; this mirrors story-scroll.tsx).
 
 import gsap from 'gsap';

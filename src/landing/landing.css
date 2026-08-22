@@ -1,17 +1,19 @@
-/* CATOSHI landing — purple neon sushi vibe, story-scroll sections */
+/* Oshicat landing — sakura stall, lime lanterns, story-scroll sections */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
 
 :root {
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-  --c-bg: #12081f;
-  --c-ink: #f8f0ff;
-  --c-muted: rgba(248, 240, 255, 0.72);
-  --c-pink: #ff7a9a;
-  --c-purple: #8b5cf6;
-  --c-deep: #2a1450;
-  --c-card: rgba(30, 14, 48, 0.88);
-  --c-line: rgba(255, 255, 255, 0.18);
+  --c-bg: #f4a1b5;
+  --c-ink: #2a121c;
+  --c-muted: rgba(42, 18, 28, 0.68);
+  --c-pink: #f4a1b5;
+  --c-green: #3ae014;
+  --c-purple: #6b3a55;
+  --c-deep: #3d1e33;
+  --c-card: rgba(255, 246, 248, 0.9);
+  --c-line: rgba(42, 18, 28, 0.16);
+  --c-cream: #fff6f8;
 }
 
 #landing {
@@ -48,7 +50,7 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 4vw;
-  background: rgba(18, 8, 31, 0.82);
+  background: rgba(244, 161, 181, 0.88);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--c-line);
 }
@@ -62,12 +64,11 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
   color: inherit;
 }
 .lp-brand img {
-  width: 42px;
-  height: 42px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
-  /* JPG logo has a solid purple plate — blend it into the nav bar. */
-  mix-blend-mode: lighten;
-  filter: drop-shadow(0 2px 8px rgba(255, 122, 154, 0.35));
+  /* Stall crop sits on the same sakura plate as the nav, so the cart reads. */
+  filter: drop-shadow(0 2px 8px rgba(66, 240, 7, 0.35));
 }
 .lp-nav-links {
   display: flex;
@@ -87,7 +88,7 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
   border-radius: 999px;
   text-decoration: none;
 }
-.lp-nav-links a:hover, .lp-nav-links button:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.lp-nav-links a:hover, .lp-nav-links button:hover { color: var(--c-ink); background: rgba(255,255,255,0.35); }
 .lp-nav-cta {
   display: flex;
   gap: 8px;
@@ -105,18 +106,20 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #fff;
-  background: rgba(255,255,255,0.06);
+  color: inherit;
+  background: rgba(255,255,255,0.28);
 }
 .lp-btn:hover { filter: brightness(1.08); }
 .lp-btn:active { transform: translateY(1px); }
 .lp-btn-primary {
-  background: #ff7a9a;
+  background: #3ae014;
+  color: #142010;
   border-color: transparent;
   box-shadow: none;
 }
 .lp-btn-buy {
-  background: #22c55e;
+  background: #3d1e33;
+  color: #fff6f8;
   border-color: transparent;
   box-shadow: none;
 }
@@ -136,21 +139,21 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
   gap: 8px;
   padding: 7px 12px;
   border-radius: 999px;
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(58, 224, 20, 0.16);
+  border: 1px solid rgba(58, 224, 20, 0.45);
   font: 700 12px/1 var(--font-sans);
-  color: #86efac;
+  color: #1a6a12;
 }
 .lp-online .dot {
   width: 8px; height: 8px; border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 0 0 rgba(34,197,94,.6);
+  background: #3ae014;
+  box-shadow: 0 0 0 0 rgba(58,224,20,.6);
   animation: lp-pulse 1.8s ease-out infinite;
 }
 @keyframes lp-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
-  70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
-  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  0% { box-shadow: 0 0 0 0 rgba(58,224,20,.55); }
+  70% { box-shadow: 0 0 0 8px rgba(58,224,20,0); }
+  100% { box-shadow: 0 0 0 0 rgba(58,224,20,0); }
 }
 
 /* ---------- Flow sections (story-scroll pin + rotate stack) ---------- */
@@ -250,23 +253,13 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
 .flow-full { display: none; margin-top: 10px; opacity: 0.85; font-size: 0.95em; line-height: 1.5; }
 .flow-full.open { display: block; }
 
-/* Hero — city photo as full-bleed background */
+/* Hero — sakura plate, stall as the mark */
 .lp-hero {
-  color: #fff;
-  background-color: #12081f;
-  background-image: url('/brand/hero-city.png');
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
+  color: var(--c-ink);
+  background-color: var(--c-bg);
 }
-/* Solid dark scrim so type/buttons stay readable over the city */
 .lp-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(12, 6, 22, 0.58);
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 .lp-hero .flow-art-container {
   position: relative;
@@ -279,15 +272,15 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
 }
 .lp-big-sushi {
   position: absolute;
-  right: clamp(2vw, 6vw, 10vw);
-  top: 50%;
-  margin-top: calc(min(48vw, 560px) * -0.36);
-  width: min(42vw, 480px);
-  max-width: 480px;
-  aspect-ratio: 420 / 340;
+  right: clamp(2vw, 5vw, 8vw);
+  top: 46%;
+  margin-top: calc(min(40vw, 440px) * -0.5);
+  width: min(38vw, 440px);
+  max-width: 440px;
+  aspect-ratio: 1;
   pointer-events: auto;
   z-index: 4;
-  opacity: 0.95;
+  background: transparent;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -298,7 +291,7 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
 }
 .lp-big-sushi:active { cursor: grabbing; }
 .lp-big-sushi.is-hot {
-  filter: drop-shadow(0 0 22px rgba(255, 122, 154, 0.55));
+  filter: drop-shadow(0 0 18px rgba(66, 240, 7, 0.45));
   z-index: 6;
 }
 .lp-big-sushi-float {
@@ -314,23 +307,14 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
 .lp-big-sushi.is-live .lp-big-sushi-float {
   animation: none;
 }
-.lp-big-sushi-glow {
-  position: absolute;
-  inset: 18% 14% 22%;
-  border-radius: 50%;
-  background: rgba(255, 122, 154, 0.28);
-  filter: blur(32px);
-  z-index: 0;
-  animation: lp-sushi-pulse 3.2s ease-in-out infinite;
-  pointer-events: none;
-}
 .lp-big-sushi-svg {
   position: relative;
   z-index: 1;
   display: block;
   width: 100%;
   height: auto;
-  filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.5));
+  background: transparent;
+  filter: drop-shadow(0 14px 18px rgba(42, 18, 28, 0.22));
   pointer-events: none;
 }
 .lp-sushi-maki {
@@ -352,7 +336,6 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
 }
 @media (prefers-reduced-motion: reduce) {
   .lp-big-sushi-float,
-  .lp-big-sushi-glow,
   .lp-sushi-maki { animation: none; }
   .lp-big-sushi { cursor: default; }
 }
@@ -405,7 +388,7 @@ body:has(#landing:not(.hidden-display):not(.gone)) {
 }
 a.lp-btn-buy {
   text-decoration: none;
-  color: #fff;
+  color: #fff6f8;
 }
 /* ---------- Subpages (nav destinations) ---------- */
 .lp-page {
@@ -414,6 +397,7 @@ a.lp-btn-buy {
   padding: 40px 4vw 80px;
   max-width: 920px;
   margin: 0 auto;
+  color: var(--c-cream);
 }
 .lp-page.show { display: block; }
 .lp-page h1 {
@@ -426,10 +410,10 @@ a.lp-btn-buy {
   font: 700 12px/1 var(--font-sans);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--c-pink);
+  color: var(--c-green);
   background: none; border: 0; cursor: pointer; padding: 0;
 }
-.lp-page p, .lp-page li { color: var(--c-muted); line-height: 1.65; font-size: 1.05rem; }
+.lp-page p, .lp-page li { color: rgba(255, 246, 248, 0.78); line-height: 1.65; font-size: 1.05rem; }
 .lp-page h2 { margin: 28px 0 10px; font-size: 1.2rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .lp-page ul { padding-left: 1.2em; }
 .lp-token-table {
@@ -441,9 +425,9 @@ a.lp-btn-buy {
 .lp-token-table th, .lp-token-table td {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--c-line);
+  border-bottom: 1px solid rgba(255, 246, 248, 0.16);
 }
-.lp-token-table th { color: var(--c-pink); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.lp-token-table th { color: var(--c-green); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
 
 /* ---------- Wallet modal ---------- */
 #wallet-gate {
@@ -454,20 +438,21 @@ a.lp-btn-buy {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(8, 4, 16, 0.72);
+  background: rgba(31, 20, 30, 0.72);
   backdrop-filter: blur(8px);
 }
 #wallet-gate.show { display: flex; }
 .wg-card {
   width: min(440px, 100%);
-  background: linear-gradient(180deg, #2a1450, #1a0c30);
-  border: 1px solid var(--c-line);
+  background: linear-gradient(180deg, #5a2a40, #2a121c);
+  border: 1px solid rgba(255, 246, 248, 0.18);
   border-radius: 22px;
   padding: 26px 24px 22px;
   box-shadow: 0 24px 60px rgba(0,0,0,.5);
+  color: #fff6f8;
 }
 .wg-card h2 { margin: 0 0 6px; font-size: 1.45rem; }
-.wg-card .sub { margin: 0 0 18px; color: var(--c-muted); font-size: 0.95rem; }
+.wg-card .sub { margin: 0 0 18px; color: rgba(255, 246, 248, 0.72); font-size: 0.95rem; }
 .wg-card label {
   display: block;
   font-size: 11px;
@@ -489,7 +474,7 @@ a.lp-btn-buy {
   outline: none;
   margin-bottom: 16px;
 }
-.wg-card input:focus { border-color: var(--c-pink); }
+.wg-card input:focus { border-color: var(--c-green); }
 .wg-wallets { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
 .wg-wallet {
   display: flex;
@@ -506,8 +491,8 @@ a.lp-btn-buy {
   transition: border-color .12s, background .12s;
 }
 .wg-wallet:hover, .wg-wallet.selected {
-  border-color: var(--c-pink);
-  background: rgba(255, 122, 154, 0.1);
+  border-color: var(--c-green);
+  background: rgba(58, 224, 20, 0.12);
 }
 .wg-wallet img {
   width: 36px; height: 36px; border-radius: 10px; object-fit: cover;
@@ -516,7 +501,7 @@ a.lp-btn-buy {
 .wg-wallet .demo-ico {
   width: 36px; height: 36px; border-radius: 10px;
   display: grid; place-items: center;
-  background: linear-gradient(135deg, #ff7a9a, #8b5cf6);
+  background: linear-gradient(135deg, #3ae014, #f4a1b5);
   font-size: 18px;
 }
 .wg-actions { display: flex; gap: 10px; justify-content: flex-end; }
@@ -546,7 +531,7 @@ a.lp-btn-buy {
   cursor: pointer;
   backdrop-filter: blur(8px);
 }
-.gc-btn:hover { border-color: rgba(255,122,154,0.55); }
+.gc-btn:hover { border-color: rgba(58,224,20,0.55); }
 
 #wallet {
   position: fixed;
@@ -588,7 +573,7 @@ a.lp-btn-buy {
 }
 #minimap {
   display: block; border-radius: 12px; border: 1px solid rgba(255,200,255,0.22);
-  box-shadow: 0 8px 28px rgba(0,0,0,0.45); background: #2a1450; cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45); background: #3d1e33; cursor: pointer;
 }
 #mm-bar {
   position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 1;
@@ -695,8 +680,8 @@ a.lp-btn-buy {
 }
 .tut-cursor-ring {
   position: absolute; inset: 0; border-radius: 50%;
-  border: 2px solid rgba(255,122,154,0.85);
-  box-shadow: 0 0 16px rgba(139,92,246,0.55);
+  border: 2px solid rgba(58,224,20,0.85);
+  box-shadow: 0 0 16px rgba(244,161,181,0.55);
   animation: tut-ring 1.2s ease-out infinite;
 }
 .tut-cursor-dot {
@@ -731,7 +716,7 @@ a.lp-btn-buy {
   border: 2px solid rgba(255,255,255,0.25);
   color: #fff; font: 800 14px system-ui, sans-serif;
 }
-.tut-key-pulse { border-color: #ff7a9a; box-shadow: 0 0 12px rgba(255,122,154,0.5); }
+.tut-key-pulse { border-color: #3ae014; box-shadow: 0 0 12px rgba(58,224,20,0.5); }
 .tut-card {
   position: absolute; left: 50%; bottom: 28px;
   transform: translateX(-50%);
@@ -744,7 +729,7 @@ a.lp-btn-buy {
   pointer-events: auto;
   box-shadow: 0 12px 40px rgba(0,0,0,0.45);
 }
-.tut-step { font: 700 11px system-ui; letter-spacing: 0.12em; text-transform: uppercase; color: #ff7a9a; }
+.tut-step { font: 700 11px system-ui; letter-spacing: 0.12em; text-transform: uppercase; color: #3ae014; }
 .tut-title { margin: 6px 0 6px; font: 800 18px/1.2 var(--font-sans); }
 .tut-body { margin: 0 0 14px; font: 500 14px/1.45 var(--font-sans); color: rgba(248,240,255,0.8); }
 .tut-actions { display: flex; justify-content: space-between; gap: 10px; }
@@ -754,7 +739,7 @@ a.lp-btn-buy {
 }
 .tut-skip { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #ccc; }
 .tut-next {
-  background: linear-gradient(135deg, #ff7a9a, #8b5cf6);
+  background: linear-gradient(135deg, #3ae014, #f4a1b5);
   border: 0; color: #fff;
 }
 
@@ -775,8 +760,8 @@ a.lp-btn-buy {
   justify-content: center;
   border-radius: 14px;
   border: 1px solid var(--c-line);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.4);
+  color: var(--c-ink);
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
@@ -801,7 +786,7 @@ a.lp-btn-buy {
   flex-direction: column;
   gap: 6px;
   padding: 10px 4vw calc(14px + env(safe-area-inset-bottom, 0px));
-  background: rgba(18, 8, 31, 0.97);
+  background: rgba(244, 161, 181, 0.97);
   border-bottom: 1px solid var(--c-line);
   backdrop-filter: blur(12px);
 }
@@ -813,11 +798,11 @@ a.lp-btn-buy {
   color: var(--c-ink);
   background: none;
   border: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--c-line);
   padding: 15px 4px;
   cursor: pointer;
 }
-.lp-drawer button[data-page]:active { color: var(--c-pink); }
+.lp-drawer button[data-page]:active { color: #1a6a12; }
 .lp-drawer-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .lp-drawer-foot .lp-btn { flex: 1 1 auto; justify-content: center; min-height: 46px; }
 .lp-drawer-foot .lp-btn-x { flex: 0 0 46px; width: 46px; height: 46px; }
@@ -833,7 +818,7 @@ a.lp-btn-buy {
   .lp-nav-cta .lp-btn-x,
   .lp-nav-cta .lp-btn-buy { display: none; }   /* they live in the drawer instead */
   .lp-nav-cta { gap: 8px; }
-  .lp-brand img { width: 34px; height: 34px; }
+  .lp-brand img { width: 42px; height: 42px; }
   .lp-brand span { font-size: 15px; }
   .lp-nav-cta .lp-btn-primary { padding: 12px 16px; min-height: 44px; }
 }

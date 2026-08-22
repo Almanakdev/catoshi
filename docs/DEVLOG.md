@@ -1,5 +1,26 @@
 # Development log
 
+## 2026-08-22 — Oshicat / $OSHICAT
+
+Renamed the public brand from CATOSHI to Oshicat. The ticker is `$OSHICAT`.
+Wordmarks (nav, hero, start screen, shop sign) read OSHICAT. Save keys and
+asset filenames stay on the old namespace so existing sessions still load.
+
+## 2026-08-22 — Sakura stall brand
+
+Replaced the maroon-plate stall logo with the new sakura-pink mark (lime lanterns,
+おいしい! neon) and retinted the landing + UI to match.
+
+- `public/brand/catoshi-logo.jpg` is the full sakura plate. `catoshi-stall.png`
+  is a tighter transparent crop for the nav, hero, start screen, and join mark.
+  Favicon and apple-touch keep a pink plate so the cart still reads at 32px.
+- Landing is no longer purple-night: sakura `#f4a1b5` field, wood ink, lantern
+  green `#3ae014` as the Play CTA. Story sections follow the stall (wood interior,
+  cream, lime, dark wood). Hero drops the city photo; the stall is the interactive
+  graphic.
+- In-game kit, HUD cards, touch-control “on” state, minimap, and a modest city
+  sky shift follow the same pink / lime / wood tokens.
+
 ## 2026-08-12 — Mobile
 
 The site and the game now work on a phone. Nothing about the desktop experience
